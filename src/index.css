@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #fcf7ef;
+  --surface: rgba(255, 252, 246, 0.65);
+  --surface-strong: rgba(255, 252, 246, 0.92);
+  --text: #2b221b;
+  --muted: #6d6256;
+  --accent: #9a4c2e;
+  --accent-strong: #7c3923;
+  --accent-soft: rgba(154, 76, 46, 0.14);
+  --border: rgba(119, 96, 74, 0.2);
+  --shadow: 0 18px 40px rgba(72, 48, 24, 0.12);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: 'Roboto', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  background:
+    radial-gradient(circle at top left, rgba(255, 247, 214, 0.6), transparent 34%),
+    linear-gradient(135deg, var(--bg), #f6ebdb 100%);
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+button,
+[role='button'],
+a,
+input,
+textarea,
+select {
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease,
+    color 160ms ease, border-color 160ms ease;
+}
+
+button,
+[role='button'],
+a,
+input,
+textarea,
+select {
+  min-height: 44px;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(154, 76, 46, 0.35);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader-only by default. The 3D Grove canvas is genuinely invisible
+   to assistive tech (it's just pixels), so this is the real interactive
+   surface for keyboard/AT users — it stays visually hidden for mouse users
+   but reveals itself the moment keyboard focus lands inside it, so a sighted
+   keyboard-only user gets a visible list too, not just a screen-reader one. */
+.a11y-reveal {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.a11y-reveal:focus-within {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Shared "glass" surface — reused by the header, nav dock, and hover panel */
+.glass-surface {
+  background: var(--surface);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow);
+}

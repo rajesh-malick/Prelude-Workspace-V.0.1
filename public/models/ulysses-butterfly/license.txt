@@ -1,0 +1,11 @@
+Model Information:
+* title:	Ulysses Butterfly
+* source:	https://sketchfab.com/3d-models/ulysses-butterfly-1155effb97564974aa0553db3d5eed57
+* author:	eb78 (https://sketchfab.com/E.A.Cornell)
+
+Model License:
+* license type:	CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+* requirements:	Author must be credited. Modified versions must have the same license. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Ulysses Butterfly" (https://sketchfab.com/3d-models/ulysses-butterfly-1155effb97564974aa0553db3d5eed57) by eb78 (https://sketchfab.com/E.A.Cornell) licensed under CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)

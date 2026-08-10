@@ -1,0 +1,181 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Plus, Trash2, ChevronRight } from 'lucide-react';
+import { getStatus } from '../utils/commentStatus';
+
+const STATUS_LABEL = {
+  active: 'Active',
+  blocked: 'Blocked',
+  'review pending': 'Review pending',
+};
+
+const VERSION_STATUS_LABEL = {
+  approved: 'Approved',
+  'in review': 'In review',
+  draft: 'Draft',
+  blocked: 'Blocked',
+};
+
+function getTeamInitials(project) {
+  const names = [];
+  const seen = new Set();
+  const add = (name) => {
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    names.push(name);
+  };
+  project.versions.forEach((v) => add(v.owner));
+  project.versions.forEach((v) => v.comments.forEach((c) => add(c.author)));
+  return names;
+}
+
+export default function FocusProjectView({ project, onBack, onOpenVersion, onRequestNewVersion, onDeleteVersion, readOnly }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
+  const team = getTeamInitials(project);
+  const allComments = project.versions.flatMap((v) => v.comments);
+  const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.25 }}
+      className="mx-auto max-w-4xl px-8 pb-28 pt-28"
+    >
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
+      >
+        <ArrowLeft size={14} strokeWidth={2} /> Projects
+      </button>
+
+      <div className="mt-3 flex items-center justify-between">
+        <div>
+          <h1 className="text-[24px] font-semibold text-stone-800">{project.name}</h1>
+          <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-stone-500">
+            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
+            {STATUS_LABEL[project.status] ?? project.status}
+          </div>
+        </div>
+        <div className="flex -space-x-2">
+          {team.map((name) => (
+            <div
+              key={name}
+              title={name}
+              className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-stone-200 text-[12px] font-semibold text-stone-700"
+            >
+              {name.charAt(0).toUpperCase()}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center gap-8 rounded-2xl bg-white/70 px-6 py-4 text-[13px] ring-1 ring-black/5">
+        <div>
+          <div className="font-medium text-stone-500">Versions</div>
+          <div className="mt-0.5 text-[16px] font-semibold text-stone-800">{project.versions.length}</div>
+        </div>
+        <div>
+          <div className="font-medium text-stone-500">Comments</div>
+          <div className="mt-0.5 text-[16px] font-semibold text-stone-800">
+            {allComments.length === 0 ? 'None yet' : `${resolvedCount}/${allComments.length} resolved`}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-[15px] font-semibold text-stone-800">Versions</h2>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={onRequestNewVersion}
+            className="flex items-center gap-1.5 rounded-full bg-stone-800 px-3.5 py-2 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90"
+          >
+            <Plus size={13} strokeWidth={2.5} /> New version
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 overflow-hidden rounded-2xl bg-white/70 ring-1 ring-black/5">
+        {project.versions.length === 0 && (
+          <div className="px-5 py-8 text-center text-[13px] text-stone-400">No versions yet</div>
+        )}
+        {project.versions.map((v, i) =>
+          confirmingDelete === v.id ? (
+            <div
+              key={v.id}
+              className={`flex items-center justify-between bg-red-50 px-5 py-4 ${i > 0 ? 'border-t border-black/5' : ''}`}
+            >
+              <span className="text-[13px] font-medium text-red-700">
+                {project.versions.length === 1
+                  ? `Delete ${v.label}? The whole project goes with it.`
+                  : `Delete ${v.label}? This can't be undone.`}
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteVersion?.(v.id);
+                    setConfirmingDelete(null);
+                  }}
+                  className="text-[12.5px] font-semibold text-red-700 hover:underline"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(null)}
+                  className="text-[12.5px] font-medium text-stone-500 hover:text-stone-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              key={v.id}
+              className={`group flex items-center transition-colors hover:bg-black/[0.03] ${
+                i > 0 ? 'border-t border-black/5' : ''
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onOpenVersion(v.id)}
+                className="flex flex-1 items-center justify-between px-5 py-4 text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: v.status === 'blocked' ? '#C2410C' : project.color }}
+                  />
+                  <span className="text-[14px] font-medium text-stone-800">{v.label}</span>
+                  <span className="text-[12px] text-stone-400">
+                    {v.owner} · {v.createdAt}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[12.5px] text-stone-500">
+                  {VERSION_STATUS_LABEL[v.status] ?? v.status}
+                  {v.comments.length > 0 && <span className="text-stone-400">{v.comments.length} comments</span>}
+                  <ChevronRight size={15} strokeWidth={2} className="text-stone-300" />
+                </div>
+              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(v.id)}
+                  title="Delete version"
+                  aria-label={`Delete ${v.label}`}
+                  className="mr-3 flex h-8 w-8 flex-none items-center justify-center rounded-lg text-stone-300 opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <Trash2 size={14} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+          )
+        )}
+      </div>
+    </motion.div>
+  );
+}
