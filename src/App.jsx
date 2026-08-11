@@ -30,10 +30,39 @@ import { getBloomWorldPosition } from './utils/treeGeometry';
 let nextId = 1000;
 const genId = (prefix) => `${prefix}-${nextId++}`;
 
-// Persisted to the browser's localStorage — survives a refresh on this
-// machine/browser, but there's still no real backend, so it isn't shared
-// across devices or teammates.
-const STORAGE_KEY = 'prelude-projects';
+// Projects/versions/comments are now real, backend-persisted data — one
+// JSON document per account, read/written via /api/projects, tied to the
+// signed-in session cookie rather than anything client-side. This also
+// fixes a real bug the old shared-localStorage version had: a brand-new
+// account on a browser that had already been used for another account
+// used to inherit that account's projects instead of starting empty —
+// now every account's data genuinely lives only under its own row.
+// A 401 here specifically means "the session cookie is a validly-signed
+// JWT, but the account it names doesn't exist anymore" (see api/projects.js)
+// — genuinely different from "this account has zero projects", and the
+// caller needs to tell them apart to sign a stale session out instead of
+// quietly showing an empty Grove under a name that isn't really signed in.
+async function fetchProjects() {
+  const res = await fetch('/api/projects', { credentials: 'include' });
+  if (res.status === 401) return { projects: [], sessionInvalid: true };
+  if (!res.ok) return { projects: [], sessionInvalid: false };
+  const data = await res.json();
+  // A project with zero versions shouldn't exist — filtered here too
+  // (not just at delete-time) so any such record from an older save
+  // cleans itself up the next time the Grove loads.
+  const projects = Array.isArray(data.projects) ? data.projects.filter((p) => p.versions.length > 0) : [];
+  return { projects, sessionInvalid: false };
+}
+
+async function saveProjects(projects) {
+  const res = await fetch('/api/projects', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projects }),
+  });
+  return { sessionInvalid: res.status === 401 };
+}
 
 // Mock "invited" teammates for the Collaboration settings section — local
 // only, no email is ever actually sent.
@@ -45,22 +74,6 @@ function loadCollaborators() {
     if (raw) return JSON.parse(raw);
   } catch {
     // ignore
-  }
-  return [];
-}
-
-// A genuinely fresh browser starts with an empty Grove (see EmptySeed) —
-// the 4 example projects are opt-in via "Load example projects", not the
-// default, so first-time visitors get the real new-user experience.
-function loadProjects() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    // A project with zero versions shouldn't exist — filtered here too
-    // (not just at delete-time) so any such record from an older build
-    // cleans itself up the next time the Grove loads.
-    if (raw) return JSON.parse(raw).filter((p) => p.versions.length > 0);
-  } catch {
-    // corrupt/unavailable storage — fall back to empty below
   }
   return [];
 }
@@ -136,20 +149,57 @@ export default function App() {
 
   const [showWelcome, setShowWelcome] = useState(false);
   const [mode, setMode] = useState('grove');
-  const [projects, setProjects] = useState(() => {
-    const loaded = loadProjects();
-    nextId = highestGenId(loaded) + 1;
-    return loaded;
-  });
+  const [projects, setProjects] = useState([]);
+  // Tracks which account's data is actually loaded into `projects` right
+  // now — lets the save effect below tell "haven't loaded this account's
+  // data yet" apart from "this account genuinely has zero projects", so it
+  // never fires with a stale/empty array and overwrites real saved data.
+  const [projectsLoadedFor, setProjectsLoadedFor] = useState(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    } catch {
-      // e.g. storage quota exceeded (large uploaded images) — the app
-      // keeps working in-memory, it just won't survive a refresh this time
-    }
-  }, [projects]);
+    if (!session?.email || projectsLoadedFor === session.email) return;
+    let cancelled = false;
+    fetchProjects().then(({ projects: loaded, sessionInvalid }) => {
+      if (cancelled) return;
+      if (sessionInvalid) {
+        // The cookie is a validly-signed JWT for an account that no longer
+        // exists — treat it exactly like a sign-out rather than letting the
+        // save effect below run next and overwrite nothing under a name
+        // that isn't really signed in.
+        setSession(null);
+        setProjects([]);
+        setProjectsLoadedFor(null);
+        setDestination(null);
+        setArrived(true);
+        setMode('grove');
+        return;
+      }
+      nextId = highestGenId(loaded) + 1;
+      setProjects(loaded);
+      setProjectsLoadedFor(session.email);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, projectsLoadedFor]);
+
+  useEffect(() => {
+    if (!session?.email || projectsLoadedFor !== session.email) return;
+    saveProjects(projects)
+      .then(({ sessionInvalid }) => {
+        if (!sessionInvalid) return;
+        setSession(null);
+        setProjects([]);
+        setProjectsLoadedFor(null);
+        setDestination(null);
+        setArrived(true);
+        setMode('grove');
+      })
+      .catch(() => {
+        // Network hiccup — the in-memory state stays correct for the rest of
+        // this session, it just won't have made it to the backend this time.
+      });
+  }, [projects, session, projectsLoadedFor]);
 
   const [destination, setDestination] = useState(null);
   const [arrived, setArrived] = useState(true);
@@ -232,6 +282,8 @@ export default function App() {
       // this tab regardless of whether the request lands.
     });
     setSession(null);
+    setProjects([]);
+    setProjectsLoadedFor(null);
     setDestination(null);
     setArrived(true);
     setMode('grove');
@@ -527,6 +579,14 @@ export default function App() {
     [projects]
   );
 
+  // A direct way to remove a whole project in one step — deleting every
+  // version one at a time (the only option before) worked but was tedious.
+  const handleDeleteProject = useCallback((projectId) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    setDestination((d) => (d?.projectId === projectId ? null : d));
+    setArrived(true);
+  }, []);
+
   // Archived is an organizational status, not a lock — an archived project
   // still opens, still takes new versions/comments, it just drops out of
   // Focus mode's default project list (see FocusDashboard's "Archived"
@@ -688,6 +748,7 @@ export default function App() {
                 onOpenVersion={(versionId) => handleOpenReview(focusedProject.id, versionId)}
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
+                onDeleteProject={readOnly ? undefined : handleDeleteProject}
                 readOnly={readOnly}
               />
             )}
@@ -751,6 +812,7 @@ export default function App() {
                 onOpenVersion={(versionId) => handleFocusOpenReview(focusedProject.id, versionId)}
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
+                onDeleteProject={readOnly ? undefined : handleDeleteProject}
                 onToggleArchive={readOnly ? undefined : handleToggleArchive}
                 readOnly={readOnly}
               />

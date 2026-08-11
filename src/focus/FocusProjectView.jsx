@@ -36,9 +36,11 @@ export default function FocusProjectView({
   onRequestNewVersion,
   onDeleteVersion,
   onToggleArchive,
+  onDeleteProject,
   readOnly,
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
+  const [confirmingDeleteProject, setConfirmingDeleteProject] = useState(false);
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
   const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
@@ -51,13 +53,54 @@ export default function FocusProjectView({
       transition={{ duration: 0.25 }}
       className="mx-auto max-w-4xl px-8 pb-28 pt-28"
     >
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
-      >
-        <ArrowLeft size={14} strokeWidth={2} /> Projects
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
+        >
+          <ArrowLeft size={14} strokeWidth={2} /> Projects
+        </button>
+        {!readOnly && onDeleteProject && (
+          <button
+            type="button"
+            onClick={() => setConfirmingDeleteProject(true)}
+            title="Delete project"
+            aria-label="Delete project"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <Trash2 size={14} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+
+      {confirmingDeleteProject && (
+        <div className="mt-3 rounded-xl bg-red-50 px-4 py-3">
+          <div className="text-[13px] font-medium text-red-700">
+            Delete "{project.name}" and all {project.versions.length} version{project.versions.length === 1 ? '' : 's'}?
+            This can't be undone.
+          </div>
+          <div className="mt-1.5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                onDeleteProject(project.id);
+                setConfirmingDeleteProject(false);
+              }}
+              className="text-[12.5px] font-semibold text-red-700 hover:underline"
+            >
+              Delete project
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDeleteProject(false)}
+              className="text-[12.5px] font-medium text-stone-500 hover:text-stone-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between">
         <div>

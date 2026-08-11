@@ -34,8 +34,17 @@ function getTeamInitials(project) {
   return names;
 }
 
-export default function ProjectOverlay({ project, onBack, onOpenVersion, onRequestNewVersion, onDeleteVersion, readOnly }) {
+export default function ProjectOverlay({
+  project,
+  onBack,
+  onOpenVersion,
+  onRequestNewVersion,
+  onDeleteVersion,
+  onDeleteProject,
+  readOnly,
+}) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
+  const [confirmingDeleteProject, setConfirmingDeleteProject] = useState(false);
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
   const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
@@ -49,13 +58,54 @@ export default function ProjectOverlay({ project, onBack, onOpenVersion, onReque
       className="fixed right-6 top-24 z-20 w-[320px]"
     >
       <div className="glass-surface rounded-2xl p-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="mb-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
-        >
-          <ArrowLeft size={15} strokeWidth={2} /> Grove
-        </button>
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
+          >
+            <ArrowLeft size={15} strokeWidth={2} /> Grove
+          </button>
+          {!readOnly && onDeleteProject && (
+            <button
+              type="button"
+              onClick={() => setConfirmingDeleteProject(true)}
+              title="Delete project"
+              aria-label="Delete project"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          )}
+        </div>
+
+        {confirmingDeleteProject && (
+          <div className="mb-3 rounded-lg bg-red-50 px-3 py-2.5">
+            <div className="text-[13px] font-medium text-red-700">
+              Delete "{project.name}" and all {project.versions.length} version
+              {project.versions.length === 1 ? '' : 's'}? This can't be undone.
+            </div>
+            <div className="mt-1.5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteProject(project.id);
+                  setConfirmingDeleteProject(false);
+                }}
+                className="text-[12.5px] font-semibold text-red-700 hover:underline"
+              >
+                Delete project
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingDeleteProject(false)}
+                className="text-[12.5px] font-medium text-stone-500 hover:text-stone-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {readOnly && (
           <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 text-[12.5px] font-medium text-emerald-700">

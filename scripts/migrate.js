@@ -14,7 +14,14 @@ async function migrate() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
-  console.log('Migration complete: users table is ready.');
+  // One JSON document per account holding their whole projects/versions/
+  // comments tree — same shape the app already worked with when it lived
+  // in localStorage, just persisted server-side now so it's tied to the
+  // account rather than one browser.
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS projects_data JSONB NOT NULL DEFAULT '[]'::jsonb
+  `;
+  console.log('Migration complete: users table (with projects_data) is ready.');
 }
 
 migrate().catch((err) => {
