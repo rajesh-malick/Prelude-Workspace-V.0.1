@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sprout, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import zuperLogo from '../assets/zuper-logo.jpg';
 
 const ALLOWED_DOMAIN = 'zuper.co';
 
@@ -78,11 +79,8 @@ export default function SignInScreen({ onSignIn }) {
         className="glass-surface w-[380px] rounded-2xl p-6"
       >
         <div className="flex flex-col items-center text-center">
-          {/* TODO: swap for the real Zuper logo once provided */}
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-700/10 text-emerald-700">
-            <Sprout size={20} strokeWidth={2} />
-          </div>
-          <h1 className="mt-3 text-[19px] font-semibold text-stone-800">Prelude</h1>
+          <img src={zuperLogo} alt="Zuper" className="h-7 w-auto" />
+          <h1 className="mt-4 text-[19px] font-semibold text-stone-800">Prelude</h1>
           <p className="mt-1 text-[12.5px] text-stone-500">Zuper's living workspace for design review.</p>
         </div>
 
