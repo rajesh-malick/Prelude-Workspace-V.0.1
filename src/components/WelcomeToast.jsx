@@ -25,8 +25,8 @@ export default function WelcomeToast({ name, onDismiss }) {
         <div className="flex-1">
           <div className="text-[13px] font-semibold text-stone-800">Welcome, {name}</div>
           <p className="mt-1 text-[12px] leading-snug text-stone-600">
-            This is your Grove — each tree is a project, each bloom a version. Click a tree to open it, click a
-            bloom to review it, and click anywhere on a prototype to leave a comment right there.
+            Your grove is empty — plant a project and see it grow. Each tree is a project, each bloom a
+            version, and every prototype can be clicked on directly to leave a comment right there.
           </p>
         </div>
         <button

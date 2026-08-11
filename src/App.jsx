@@ -35,10 +35,6 @@ const genId = (prefix) => `${prefix}-${nextId++}`;
 // across devices or teammates.
 const STORAGE_KEY = 'prelude-projects';
 
-// The signed-in session (name + email) — persisted so a refresh doesn't
-// force sign-in again every time. Only "Sign out" clears it.
-const SESSION_KEY = 'prelude-session';
-
 // Mock "invited" teammates for the Collaboration settings section — local
 // only, no email is ever actually sent.
 const COLLAB_KEY = 'prelude-collaborators';
@@ -51,16 +47,6 @@ function loadCollaborators() {
     // ignore
   }
   return [];
-}
-
-function loadSession() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // corrupt/unavailable storage — fall back to signed-out below
-  }
-  return null;
 }
 
 // A genuinely fresh browser starts with an empty Grove (see EmptySeed) —
@@ -121,8 +107,33 @@ function nextProjectPosition(existingCount) {
 // mid-flight. Focus Mode reuses `destination` for its own drill-down but
 // ignores `arrived` entirely — there's no camera to wait for there.
 export default function App() {
-  const [session, setSession] = useState(() => loadSession());
+  // Real auth now — the session lives in an httpOnly cookie set by the
+  // /api/auth/* routes, not localStorage. `sessionChecked` gates the first
+  // render so a signed-in user doesn't flash the sign-in screen while the
+  // /api/auth/me check is still in flight.
+  const [session, setSession] = useState(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const userName = session?.name ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setSession(data.user);
+      })
+      .catch(() => {
+        // Network hiccup or API unreachable — treat as signed out rather
+        // than getting stuck on a blank screen forever.
+      })
+      .finally(() => {
+        if (!cancelled) setSessionChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [showWelcome, setShowWelcome] = useState(false);
   const [mode, setMode] = useState('grove');
   const [projects, setProjects] = useState(() => {
@@ -207,24 +218,20 @@ export default function App() {
 
   const reducedMotion = useReducedMotion();
 
-  const handleSignIn = useCallback(({ name, email }) => {
-    const next = { name, email };
-    setSession(next);
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-    } catch {
-      // storage unavailable — session just won't survive a refresh
-    }
-    setShowWelcome(true);
+  // The API call already set the session cookie — this just updates local
+  // state to match. The welcome popup is reserved for brand-new signups,
+  // not every ordinary sign-in.
+  const handleSignIn = useCallback((user, isNewUser) => {
+    setSession(user);
+    if (isNewUser) setShowWelcome(true);
   }, []);
 
   const handleSignOut = useCallback(() => {
+    fetch('/api/auth/signout', { method: 'POST', credentials: 'include' }).catch(() => {
+      // Best-effort — clearing local state below signs the user out of
+      // this tab regardless of whether the request lands.
+    });
     setSession(null);
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {
-      // ignore
-    }
     setDestination(null);
     setArrived(true);
     setMode('grove');
@@ -532,10 +539,21 @@ export default function App() {
   const creatingVersionProject = creatingVersionFor ? projects.find((p) => p.id === creatingVersionFor) ?? null : null;
 
   // A convenience for seeing a populated Grove without planting anything
-  // by hand — only offered while the Grove is actually empty.
+  // by hand — only offered while the Grove is actually empty. Tagged
+  // `isSample` so a new user who's done poking around can clear them out
+  // in one action instead of hunting for a per-version delete button.
   const handleLoadExamples = useCallback(() => {
-    setProjects(seedProjects);
+    setProjects(seedProjects.map((p) => ({ ...p, isSample: true })));
   }, []);
+
+  const handleRemoveSampleProjects = useCallback(() => {
+    setProjects((prev) => prev.filter((p) => !p.isSample));
+    setDestination((d) => {
+      if (!d) return d;
+      const stillExists = projects.find((p) => p.id === d.projectId && !p.isSample);
+      return stillExists ? d : null;
+    });
+  }, [projects]);
 
   // A new tree in the Grove — starts with one draft version so it renders
   // and behaves like every other project immediately, then jumps to it
@@ -583,6 +601,12 @@ export default function App() {
     },
     [reducedMotion]
   );
+
+  // Blank while the /api/auth/me check is in flight — avoids flashing the
+  // sign-in screen for someone who's already got a valid session cookie.
+  if (!sessionChecked) {
+    return <div className="h-full w-full" style={{ background: 'linear-gradient(to bottom, #FDF6EC 0%, #F3E9D8 100%)' }} />;
+  }
 
   if (!userName) {
     return <SignInScreen onSignIn={handleSignIn} />;
@@ -716,6 +740,7 @@ export default function App() {
                 projects={displayedProjects}
                 userName={userName}
                 onOpenProject={handleFocusSelect}
+                onRemoveSamples={readOnly ? undefined : handleRemoveSampleProjects}
               />
             )}
             {destination?.kind === 'project' && focusedProject && (

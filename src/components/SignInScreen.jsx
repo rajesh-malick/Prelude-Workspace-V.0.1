@@ -1,60 +1,66 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sprout } from 'lucide-react';
+import { Sprout, AlertCircle } from 'lucide-react';
 
-// Cosmetic front door only — there's no backend, so no password is ever
-// actually checked. What IS real: accounts created here are remembered
-// in this browser (name keyed by email), so signing back in with the
-// same email greets you by the right name.
-const ACCOUNTS_KEY = 'prelude-accounts';
-
-function loadAccounts() {
-  try {
-    return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) ?? '{}');
-  } catch {
-    return {};
-  }
-}
-
-function saveAccount(email, name) {
-  try {
-    const accounts = loadAccounts();
-    accounts[email] = name;
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-  } catch {
-    // storage unavailable — sign-in still works, just isn't remembered
-  }
-}
-
-function nameFromEmail(email) {
-  const prefix = email.split('@')[0] || email;
-  return prefix.charAt(0).toUpperCase() + prefix.slice(1);
-}
+const ALLOWED_DOMAIN = 'zuper.co';
 
 export default function SignInScreen({ onSignIn }) {
   const [mode, setMode] = useState('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const switchMode = (next) => {
+    setMode(next);
+    setError('');
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) return;
+    setError('');
 
-    if (mode === 'signup') {
-      const trimmedName = name.trim();
-      if (!trimmedName) return;
-      saveAccount(trimmedEmail, trimmedName);
-      onSignIn({ name: trimmedName, email: trimmedEmail });
-    } else {
-      const accounts = loadAccounts();
-      const resolvedName = accounts[trimmedEmail] || nameFromEmail(trimmedEmail);
-      onSignIn({ name: resolvedName, email: trimmedEmail });
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
+      setError(`Only @${ALLOWED_DOMAIN} email addresses can ${mode === 'signup' ? 'sign up' : 'sign in'}.`);
+      return;
+    }
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const body =
+        mode === 'signup'
+          ? { name: name.trim(), email: trimmedEmail, password, confirmPassword }
+          : { email: trimmedEmail, password };
+      const res = await fetch(`/api/auth/${mode}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Something went wrong. Try again.');
+        return;
+      }
+      onSignIn(data.user, data.isNewUser);
+    } catch {
+      setError('Could not reach the server. Check your connection and try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const canSubmit = mode === 'signup' ? name.trim() && email.trim() && password : email.trim() && password;
+  const canSubmit =
+    mode === 'signup'
+      ? name.trim() && email.trim() && password && confirmPassword
+      : email.trim() && password;
 
   return (
     <motion.div
@@ -69,20 +75,21 @@ export default function SignInScreen({ onSignIn }) {
         initial={{ opacity: 0, y: 14, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="glass-surface w-[360px] rounded-2xl p-6"
+        className="glass-surface w-[380px] rounded-2xl p-6"
       >
         <div className="flex flex-col items-center text-center">
+          {/* TODO: swap for the real Zuper logo once provided */}
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-700/10 text-emerald-700">
             <Sprout size={20} strokeWidth={2} />
           </div>
           <h1 className="mt-3 text-[19px] font-semibold text-stone-800">Prelude</h1>
-          <p className="mt-1 text-[12.5px] text-stone-500">A living workspace for design review.</p>
+          <p className="mt-1 text-[12.5px] text-stone-500">Zuper's living workspace for design review.</p>
         </div>
 
         <div className="mt-5 flex items-center gap-1 rounded-lg bg-black/5 p-1">
           <button
             type="button"
-            onClick={() => setMode('signin')}
+            onClick={() => switchMode('signin')}
             className={`flex-1 rounded-md py-1.5 text-[12.5px] font-medium transition-colors ${
               mode === 'signin' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
             }`}
@@ -91,7 +98,7 @@ export default function SignInScreen({ onSignIn }) {
           </button>
           <button
             type="button"
-            onClick={() => setMode('signup')}
+            onClick={() => switchMode('signup')}
             className={`flex-1 rounded-md py-1.5 text-[12.5px] font-medium transition-colors ${
               mode === 'signup' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
             }`}
@@ -115,13 +122,13 @@ export default function SignInScreen({ onSignIn }) {
             </>
           )}
 
-          <label className="mt-3 block text-[11.5px] font-medium text-stone-500">Email</label>
+          <label className="mt-3 block text-[11.5px] font-medium text-stone-500">Zuper email</label>
           <input
             type="email"
             autoFocus={mode === 'signin'}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder="you@zuper.co"
             className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
           />
 
@@ -133,16 +140,34 @@ export default function SignInScreen({ onSignIn }) {
             placeholder="••••••••"
             className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
           />
-          <p className="mt-1.5 text-[10.5px] text-stone-400">
-            Local prototype — nothing is verified, any password gets you in.
-          </p>
+
+          {mode === 'signup' && (
+            <>
+              <label className="mt-3 block text-[11.5px] font-medium text-stone-500">Confirm password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
+              />
+              <p className="mt-1.5 text-[10.5px] text-stone-400">At least 8 characters.</p>
+            </>
+          )}
+
+          {error && (
+            <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-[12px] text-red-700">
+              <AlertCircle size={14} strokeWidth={2} className="mt-0.5 flex-none" />
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
             className="mt-4 w-full rounded-full bg-stone-800 py-2.5 text-[13px] font-medium text-white transition-opacity disabled:opacity-40"
           >
-            {mode === 'signin' ? 'Enter the Grove' : 'Plant your Grove'}
+            {submitting ? 'Please wait…' : mode === 'signin' ? 'Enter the Grove' : 'Plant your Grove'}
           </button>
         </form>
       </motion.div>

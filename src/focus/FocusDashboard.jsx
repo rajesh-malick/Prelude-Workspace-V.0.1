@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { ChevronDown, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, ArrowUpDown, X } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
 import { parseElapsedMinutes } from '../utils/relativeTime';
 
@@ -194,6 +194,11 @@ function ProjectCard({ project, onOpen }) {
             Archived
           </span>
         )}
+        {project.isSample && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-amber-700">
+            Sample
+          </span>
+        )}
       </div>
       <div className="mt-1 flex items-center gap-1.5 text-[12px] text-stone-500">
         <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
@@ -228,7 +233,7 @@ function ProjectCard({ project, onOpen }) {
   );
 }
 
-export default function FocusDashboard({ projects, userName, onOpenProject }) {
+export default function FocusDashboard({ projects, userName, onOpenProject, onRemoveSamples }) {
   const [filterKey, setFilterKey] = useState('all');
   const [sortKey, setSortKey] = useState('updated');
 
@@ -246,6 +251,8 @@ export default function FocusDashboard({ projects, userName, onOpenProject }) {
     if (key === 'recently-updated') setSortKey('updated');
   };
 
+  const sampleCount = projects.filter((p) => p.isSample).length;
+
   return (
     <div className="mx-auto max-w-5xl px-8 pb-28 pt-28">
       <div>
@@ -254,6 +261,22 @@ export default function FocusDashboard({ projects, userName, onOpenProject }) {
           {visibleProjects.length} project{visibleProjects.length === 1 ? '' : 's'}
         </p>
       </div>
+
+      {sampleCount > 0 && onRemoveSamples && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-800 ring-1 ring-amber-200">
+          <span>
+            Viewing {sampleCount} sample project{sampleCount === 1 ? '' : 's'} — a good way to see how Prelude
+            works before planting your own.
+          </span>
+          <button
+            type="button"
+            onClick={onRemoveSamples}
+            className="flex flex-none items-center gap-1 rounded-full bg-white/70 px-2.5 py-1 font-medium text-amber-800 ring-1 ring-amber-300 transition-colors hover:bg-white"
+          >
+            <X size={12} strokeWidth={2.5} /> Remove samples
+          </button>
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
