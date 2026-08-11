@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
 
 const STATUS_LABEL = {
@@ -29,7 +29,15 @@ function getTeamInitials(project) {
   return names;
 }
 
-export default function FocusProjectView({ project, onBack, onOpenVersion, onRequestNewVersion, onDeleteVersion, readOnly }) {
+export default function FocusProjectView({
+  project,
+  onBack,
+  onOpenVersion,
+  onRequestNewVersion,
+  onDeleteVersion,
+  onToggleArchive,
+  readOnly,
+}) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
@@ -53,22 +61,46 @@ export default function FocusProjectView({ project, onBack, onOpenVersion, onReq
 
       <div className="mt-3 flex items-center justify-between">
         <div>
-          <h1 className="text-[24px] font-semibold text-stone-800">{project.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[24px] font-semibold text-stone-800">{project.name}</h1>
+            {project.archived && (
+              <span className="rounded-full bg-stone-200 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-600">
+                Archived
+              </span>
+            )}
+          </div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-stone-500">
             <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
             {STATUS_LABEL[project.status] ?? project.status}
           </div>
         </div>
-        <div className="flex -space-x-2">
-          {team.map((name) => (
-            <div
-              key={name}
-              title={name}
-              className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-stone-200 text-[12px] font-semibold text-stone-700"
+        <div className="flex items-center gap-3">
+          <div className="flex -space-x-2">
+            {team.map((name) => (
+              <div
+                key={name}
+                title={name}
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-stone-200 text-[12px] font-semibold text-stone-700"
+              >
+                {name.charAt(0).toUpperCase()}
+              </div>
+            ))}
+          </div>
+          {!readOnly && onToggleArchive && (
+            <button
+              type="button"
+              onClick={() => onToggleArchive(project.id)}
+              title={project.archived ? 'Restore from archive' : 'Archive project'}
+              className="flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-2 text-[12.5px] font-medium text-stone-600 ring-1 ring-black/5 transition-colors hover:bg-white"
             >
-              {name.charAt(0).toUpperCase()}
-            </div>
-          ))}
+              {project.archived ? (
+                <ArchiveRestore size={14} strokeWidth={2} />
+              ) : (
+                <Archive size={14} strokeWidth={2} />
+              )}
+              {project.archived ? 'Restore' : 'Archive'}
+            </button>
+          )}
         </div>
       </div>
 

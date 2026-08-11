@@ -520,6 +520,15 @@ export default function App() {
     [projects]
   );
 
+  // Archived is an organizational status, not a lock — an archived project
+  // still opens, still takes new versions/comments, it just drops out of
+  // Focus mode's default project list (see FocusDashboard's "Archived"
+  // filter) until restored. Grove's 3D view is unaffected on purpose —
+  // archiving is a Focus-mode list concept, not "delete the tree."
+  const handleToggleArchive = useCallback((projectId) => {
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, archived: !p.archived } : p)));
+  }, []);
+
   const creatingVersionProject = creatingVersionFor ? projects.find((p) => p.id === creatingVersionFor) ?? null : null;
 
   // A convenience for seeing a populated Grove without planting anything
@@ -702,7 +711,12 @@ export default function App() {
         <div className="absolute inset-0 overflow-y-auto">
           <AnimatePresence mode="wait">
             {!destination && (
-              <FocusDashboard key="dashboard" projects={displayedProjects} onOpenProject={handleFocusSelect} />
+              <FocusDashboard
+                key="dashboard"
+                projects={displayedProjects}
+                userName={userName}
+                onOpenProject={handleFocusSelect}
+              />
             )}
             {destination?.kind === 'project' && focusedProject && (
               <FocusProjectView
@@ -712,6 +726,7 @@ export default function App() {
                 onOpenVersion={(versionId) => handleFocusOpenReview(focusedProject.id, versionId)}
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
+                onToggleArchive={readOnly ? undefined : handleToggleArchive}
                 readOnly={readOnly}
               />
             )}
