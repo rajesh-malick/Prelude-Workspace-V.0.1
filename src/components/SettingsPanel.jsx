@@ -126,7 +126,7 @@ export default function SettingsPanel({
       </div>
 
       <p className="mt-3.5 border-t border-black/5 pt-3 text-[12px] leading-snug text-stone-400">
-        Prelude is a local prototype — everything is saved only in this browser, nothing leaves your machine.
+        Your projects are saved to your Zuper account and available wherever you sign in.
       </p>
 
       <p className="mt-2 text-[11px] leading-snug text-stone-400">
