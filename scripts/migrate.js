@@ -25,10 +25,19 @@ async function migrate() {
   // level — [{ email, permission: 'view' | 'edit' }, ...]. Lives on the
   // OWNER's row (it's their grant to give), and gets scanned across all
   // rows by /api/territories to answer "whose territory can I see".
+  // (Currently unused — this is an internal tool where everyone already
+  // has access to everyone, see api/territories.js — but left in place
+  // rather than dropped, in case per-person permissions come back.)
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS access_grants JSONB NOT NULL DEFAULT '[]'::jsonb
   `;
-  console.log('Migration complete: users table (with projects_data, access_grants) is ready.');
+  // Real, persisted notifications delivered TO this account — e.g. "so-and-so
+  // visited your territory" — capped and trimmed server-side on insert (see
+  // api/notifications.js), not an unbounded log.
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications JSONB NOT NULL DEFAULT '[]'::jsonb
+  `;
+  console.log('Migration complete: users table (with projects_data, access_grants, notifications) is ready.');
 }
 
 migrate().catch((err) => {

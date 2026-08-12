@@ -22,10 +22,15 @@ const EXT_TYPE_MAP = {
   htm: 'text/html',
 };
 
+// A pasted link with no recognized media extension — "https://www.zuper.co/"
+// being the common case, a bare page URL rather than a direct file — used
+// to come back `null` and render as an inert "file" placeholder with no
+// actual preview. Defaulting to `text/html` treats it as a webpage to
+// embed instead, which is what almost every extensionless link actually is.
 function inferTypeFromUrl(url) {
   const clean = url.split('?')[0].split('#')[0];
   const ext = clean.split('.').pop()?.toLowerCase();
-  return EXT_TYPE_MAP[ext] ?? null;
+  return EXT_TYPE_MAP[ext] ?? 'text/html';
 }
 
 export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }) {

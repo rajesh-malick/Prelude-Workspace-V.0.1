@@ -22,8 +22,9 @@ function collectRecent(projects, limit) {
 
 // Anchored directly above the bell icon in NavDock, matching wherever the
 // dock currently sits (it shifts left while a Review is open).
-export default function NotificationsPanel({ projects, territoryNotices = [], onClose, onOpen, anchorLeft }) {
+export default function NotificationsPanel({ projects, territoryNotices = [], notifications = [], onClose, onOpen, anchorLeft }) {
   const items = collectRecent(projects, 8);
+  const hasNotices = territoryNotices.length > 0 || notifications.length > 0;
 
   return (
     <motion.div
@@ -37,7 +38,7 @@ export default function NotificationsPanel({ projects, territoryNotices = [], on
     >
       <div className="border-b border-black/5 px-4 py-3 text-[15px] font-semibold text-stone-800">Activity</div>
       <div className="max-h-[360px] overflow-y-auto p-1.5">
-        {items.length === 0 && territoryNotices.length === 0 && (
+        {items.length === 0 && !hasNotices && (
           <div className="px-3 py-6 text-center text-[13.5px] text-stone-400">No comments yet across any project</div>
         )}
         {territoryNotices.map((notice) => (
@@ -46,7 +47,15 @@ export default function NotificationsPanel({ projects, territoryNotices = [], on
             {notice.text}
           </div>
         ))}
-        {territoryNotices.length > 0 && items.length > 0 && <div className="my-1 border-t border-black/5" />}
+        {/* Real, persisted notifications — someone else really did visit
+            your territory, this isn't simulated on your behalf. */}
+        {notifications.map((n) => (
+          <div key={n.id} className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-[13px] text-stone-700">
+            <MapPin size={14} strokeWidth={2} className="mt-0.5 flex-none text-sky-600" />
+            {n.text}
+          </div>
+        ))}
+        {hasNotices && items.length > 0 && <div className="my-1 border-t border-black/5" />}
         {items.map(({ project, version, comment }) => {
           const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
           const status = getStatus(comment);

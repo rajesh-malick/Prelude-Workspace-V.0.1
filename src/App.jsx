@@ -19,6 +19,7 @@ import CreateVersionModal from './components/CreateVersionModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import SignInScreen from './components/SignInScreen';
 import WelcomeToast from './components/WelcomeToast';
+import CelebrationToast from './components/CelebrationToast';
 import NotificationsPanel from './components/NotificationsPanel';
 import SettingsPanel from './components/SettingsPanel';
 import FocusDashboard from './focus/FocusDashboard';
@@ -29,6 +30,26 @@ import { getBloomWorldPosition } from './utils/treeGeometry';
 
 let nextId = 1000;
 const genId = (prefix) => `${prefix}-${nextId++}`;
+
+// One-time celebration flags (first project ever planted, first version
+// ever published) — deliberately client-side-only, not a backend field:
+// this is cosmetic flavor, not data worth a schema change for, and the
+// worst case of losing the flag (a new browser/device) is just seeing a
+// nice toast a second time, not a real problem.
+function hasCelebrated(email, key) {
+  try {
+    return localStorage.getItem(`prelude-celebrated-${key}:${email}`) === '1';
+  } catch {
+    return true;
+  }
+}
+function markCelebrated(email, key) {
+  try {
+    localStorage.setItem(`prelude-celebrated-${key}:${email}`, '1');
+  } catch {
+    // ignore
+  }
+}
 
 // Projects/versions/comments are now real, backend-persisted data — one
 // JSON document per account, read/written via /api/projects, tied to the
@@ -76,6 +97,24 @@ async function fetchTerritories() {
   if (!res.ok) return [];
   const data = await res.json();
   return Array.isArray(data.territories) ? data.territories : [];
+}
+
+async function fetchNotifications() {
+  const res = await fetch('/api/notifications', { credentials: 'include' });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data.notifications) ? data.notifications : [];
+}
+
+// Fire-and-forget — a failed delivery (network hiccup, recipient deleted
+// their account) shouldn't block or error out the visit itself.
+function notify(toEmail, text) {
+  fetch('/api/notifications', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ toEmail, text }),
+  }).catch(() => {});
 }
 
 // genId() ids embed a counter (e.g. "c-1003") — after hydrating from
@@ -148,6 +187,7 @@ export default function App() {
   }, []);
 
   const [showWelcome, setShowWelcome] = useState(false);
+  const [celebration, setCelebration] = useState(null);
   const [mode, setMode] = useState('grove');
   const [projects, setProjects] = useState([]);
   // Tracks which account's data is actually loaded into `projects` right
@@ -223,6 +263,15 @@ export default function App() {
   // Grove" doesn't touch either.
   const [territoryProjects, setTerritoryProjects] = useState([]);
   const [territoryLoadedFor, setTerritoryLoadedFor] = useState(null);
+  // Real notifications delivered TO this account (e.g. "X visited your
+  // territory") — persisted server-side, not just a session-local toast.
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoadedFor, setNotificationsLoadedFor] = useState(null);
+  // Not persisted server-side (no per-notification "read" flag, see
+  // api/notifications.js) — just "have I opened the panel since these
+  // arrived", reset to 0 each session so anything waiting from before
+  // still shows as unread once.
+  const [lastSeenNotificationCount, setLastSeenNotificationCount] = useState(0);
   const cameraRigRef = useRef(null);
   const germinationTimeoutRef = useRef(null);
   const { hour, elevation, sky } = useTimeOfDay();
@@ -245,6 +294,19 @@ export default function App() {
       cancelled = true;
     };
   }, [session, territoriesLoadedFor]);
+
+  useEffect(() => {
+    if (!session?.email || notificationsLoadedFor === session.email) return;
+    let cancelled = false;
+    fetchNotifications().then((loaded) => {
+      if (cancelled) return;
+      setNotifications(loaded);
+      setNotificationsLoadedFor(session.email);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, notificationsLoadedFor]);
 
   useEffect(() => {
     if (!viewingTerritory || territoryLoadedFor === viewingTerritory) return;
@@ -442,7 +504,19 @@ export default function App() {
 
   const handleToggleNotifications = useCallback(() => {
     setSettingsOpen(false);
-    setNotificationsOpen((v) => !v);
+    setNotificationsOpen((v) => {
+      const next = !v;
+      if (next) {
+        // Opening the panel is also the moment to check for anything new
+        // — there's no live push, so this is the freshest a "real-time"
+        // feel gets without a websocket — and to clear the unread dot.
+        fetchNotifications().then((loaded) => {
+          setNotifications(loaded);
+          setLastSeenNotificationCount(loaded.length);
+        });
+      }
+      return next;
+    });
   }, []);
   const handleToggleSettings = useCallback(() => {
     setNotificationsOpen(false);
@@ -453,9 +527,10 @@ export default function App() {
   // Switching territory resets the previously-loaded territory data so the
   // load effect above fetches fresh for whoever's next — otherwise a quick
   // switch could briefly show the last-visited teammate's projects under
-  // the new one's name. The "noticed you exploring" toast is real-feeling
-  // flavor on top of a genuine visit (this really is a real other account's
-  // real data now), not a full presence system — nobody's actually notified.
+  // the new one's name. "You entered X's territory" is just local flavor
+  // for the visitor; the owner gets a REAL, persisted notification (see
+  // api/notifications.js) — they'll see it was you next time they check,
+  // not a simulated "noticed you" that nobody on the other end ever saw.
   const handleChangeTerritory = useCallback(
     (ownerEmail) => {
       setDestination(null);
@@ -467,17 +542,14 @@ export default function App() {
       if (ownerEmail) {
         const owner = territories.find((t) => t.ownerEmail === ownerEmail);
         const ownerName = owner?.ownerName ?? ownerEmail;
-        const enterId = genId('notice');
-        setTerritoryNotices((prev) => [{ id: enterId, text: `You entered ${ownerName}'s territory.` }, ...prev]);
-        setTimeout(() => {
-          setTerritoryNotices((prev) => [
-            { id: genId('notice'), text: `${ownerName} noticed you exploring their grove.` },
-            ...prev,
-          ]);
-        }, 3000);
+        setTerritoryNotices((prev) => [
+          { id: genId('notice'), text: `You entered ${ownerName}'s territory.` },
+          ...prev,
+        ]);
+        notify(ownerEmail, `${userName} visited your territory.`);
       }
     },
-    [territories]
+    [territories, userName]
   );
 
   // Lets an impatient user finish the current camera flight — or the
@@ -615,8 +687,15 @@ export default function App() {
         })
       );
       setCreatingVersionFor(null);
+      if (!isVisitingOther && session?.email && !hasCelebrated(session.email, 'first-version')) {
+        markCelebrated(session.email, 'first-version');
+        setCelebration({
+          title: 'Your first version is live!',
+          text: 'A bloom just opened on the tree — click it any time to see this version again, or leave a comment right on it.',
+        });
+      }
     },
-    [userName, updateProjects]
+    [userName, updateProjects, isVisitingOther, session]
   );
 
   // Removing a version also backs out of it if it's the one currently
@@ -720,6 +799,13 @@ export default function App() {
       setHoveredId(null);
       setArrived(false);
       setDestination({ kind: 'project', projectId: id });
+      if (session?.email && !hasCelebrated(session.email, 'first-project')) {
+        markCelebrated(session.email, 'first-project');
+        setCelebration({
+          title: 'Your first project is planted!',
+          text: 'A new tree just took root in your Grove. Add a version next to give it something to show.',
+        });
+      }
       // Reduced motion skips the seed animation outright — the "New version"
       // form (which is where a project's first real content comes from) can
       // open immediately. Otherwise it waits for the seed-into-tree sequence
@@ -736,7 +822,7 @@ export default function App() {
         setCreatingVersionFor(id);
       }, seedDurationMs);
     },
-    [reducedMotion]
+    [reducedMotion, session]
   );
 
   // Blank while the /api/auth/me check is in flight — avoids flashing the
@@ -951,6 +1037,7 @@ export default function App() {
           <NotificationsPanel
             projects={projects}
             territoryNotices={territoryNotices}
+            notifications={notifications}
             onOpen={handleOpenFromNotification}
             onClose={() => setNotificationsOpen(false)}
             anchorLeft={destination?.kind === 'bloom'}
@@ -972,11 +1059,22 @@ export default function App() {
 
       <AnimatePresence>{showWelcome && <WelcomeToast name={userName} onDismiss={() => setShowWelcome(false)} />}</AnimatePresence>
 
+      <AnimatePresence>
+        {celebration && (
+          <CelebrationToast
+            title={celebration.title}
+            text={celebration.text}
+            onDismiss={() => setCelebration(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <NavDock
         onHome={mode === 'grove' ? handleGoHome : handleFocusGoHome}
         onOpenSearch={() => setSearchOpen(true)}
         onOpenNotifications={handleToggleNotifications}
         onOpenSettings={handleToggleSettings}
+        hasUnreadNotifications={notifications.length > lastSeenNotificationCount}
         soundOn={soundOn}
         onToggleSound={handleToggleSound}
         asideForReview={destination?.kind === 'bloom'}

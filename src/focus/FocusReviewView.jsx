@@ -10,6 +10,7 @@ import {
   PanelRightOpen,
   PanelRightClose,
   Eye,
+  ExternalLink,
 } from 'lucide-react';
 import { getStatus, getStatusNote } from '../utils/commentStatus';
 import StatusDropdown from '../components/StatusDropdown';
@@ -118,7 +119,21 @@ export default function FocusReviewView({
           <video src={version.assetUrl} controls className="absolute inset-0 h-full w-full object-contain" />
         )}
         {assetKind === 'html' && (
-          <iframe src={version.assetUrl} title={version.label} className="absolute inset-0 h-full w-full border-0 bg-white" />
+          <>
+            <iframe src={version.assetUrl} title={version.label} className="absolute inset-0 h-full w-full border-0 bg-white" />
+            {/* Some sites refuse to be framed at all (X-Frame-Options /
+                CSP) and this renders as a silent blank iframe with no error
+                — a working link out is the fallback so "no preview" never
+                means "no way to actually see it". */}
+            <a
+              href={version.assetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="glass-surface absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-stone-700 transition-colors hover:text-stone-900"
+            >
+              <ExternalLink size={12} strokeWidth={2.25} /> Open in new tab
+            </a>
+          </>
         )}
         {assetKind === 'file' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-stone-300">

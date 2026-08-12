@@ -19,6 +19,7 @@ export default function NavDock({
   onOpenSearch,
   onOpenNotifications,
   onOpenSettings,
+  hasUnreadNotifications,
   soundOn,
   onToggleSound,
   asideForReview,
@@ -38,9 +39,12 @@ export default function NavDock({
             title={label}
             aria-label={label}
             onClick={ACTIONS[label]?.(handlers)}
-            className="flex h-12 w-12 items-center justify-center rounded-full text-stone-700 transition-colors hover:bg-white/50 hover:text-stone-900"
+            className="relative flex h-12 w-12 items-center justify-center rounded-full text-stone-700 transition-colors hover:bg-white/50 hover:text-stone-900"
           >
             <Icon size={21} strokeWidth={1.75} />
+            {label === 'Notifications' && hasUnreadNotifications && (
+              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
+            )}
           </button>
         ))}
         <button
