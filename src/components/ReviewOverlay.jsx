@@ -12,6 +12,7 @@ import {
   PanelRightClose,
   Eye,
   ExternalLink,
+  MessageSquarePlus,
 } from 'lucide-react';
 import Butterfly from './Butterfly';
 import StatusDropdown from './StatusDropdown';
@@ -69,6 +70,14 @@ export default function ReviewOverlay({
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // A live embedded webpage needs real scroll/click access to itself (an
+  // iframe with pointer-events disabled can't be scrolled at all) — an
+  // iframe also never bubbles its own clicks out to this page's JS, so
+  // "click anywhere to pin a comment" can't work directly over it either
+  // way. This arms a one-shot transparent overlay on top of the iframe
+  // instead: the embed stays fully interactive until you deliberately ask
+  // to drop a pin, place it with the next click, then it reverts.
+  const [pinArmed, setPinArmed] = useState(false);
   const previewRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -78,7 +87,10 @@ export default function ReviewOverlay({
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') setPin(null);
+      if (e.key === 'Escape') {
+        setPin(null);
+        setPinArmed(false);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -92,6 +104,7 @@ export default function ReviewOverlay({
     setPin({ x, y });
     setDraft('');
     setTag(null);
+    setPinArmed(false);
   };
 
   // Keyboard equivalent of clicking a spot on the preview — there's no
@@ -169,11 +182,40 @@ export default function ReviewOverlay({
         )}
         {assetKind === 'html' && (
           <>
+            {/* Interactive, not pointer-events-none — a disabled iframe
+                can't be scrolled at all, which matters a lot when this is
+                a real webpage link rather than a small self-contained
+                mockup. Trade-off: its own clicks never bubble out to this
+                page's JS (separate browsing context), so "click anywhere
+                to pin a comment" happens via the armed overlay below
+                instead of directly on the iframe. */}
             <iframe
               src={version.assetUrl}
               title={version.label}
-              className="pointer-events-none absolute inset-0 h-full w-full border-0 bg-white"
+              className="absolute inset-0 h-full w-full border-0 bg-white"
             />
+            {!readOnly && pinArmed && (
+              <div
+                onClick={handlePreviewClick}
+                role="button"
+                tabIndex={-1}
+                aria-label="Click to place your comment"
+                className="absolute inset-0 z-10 cursor-crosshair bg-black/10"
+              >
+                <div className="glass-surface absolute left-1/2 top-4 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-stone-700">
+                  Click anywhere to place your comment
+                </div>
+              </div>
+            )}
+            {!readOnly && !pinArmed && (
+              <button
+                type="button"
+                onClick={() => setPinArmed(true)}
+                className="glass-surface absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900"
+              >
+                <MessageSquarePlus size={14} strokeWidth={2.25} /> Add a comment
+              </button>
+            )}
             {/* Some sites refuse to be framed at all (X-Frame-Options /
                 CSP) and this renders as a silent blank iframe with no error
                 — a working link out is the fallback so "no preview" never
