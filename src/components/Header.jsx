@@ -11,6 +11,7 @@ export default function Header({
   mode,
   onChangeMode,
   onCreateProject,
+  territories,
   viewingTerritory,
   onChangeTerritory,
 }) {
@@ -66,7 +67,7 @@ export default function Header({
         </div>
       )}
       <div className="flex items-center gap-3">
-        <TerritorySwitcher viewingTerritory={viewingTerritory} onChange={onChangeTerritory} />
+        <TerritorySwitcher territories={territories} viewingTerritory={viewingTerritory} onChange={onChangeTerritory} />
         <ModeToggle mode={mode} onChange={onChangeMode} />
         {!viewingTerritory && (
           <button

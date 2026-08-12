@@ -6,25 +6,33 @@ import { getSessionUser } from './_lib/session.js';
 // project, add comment, cycle status, archive, delete...) already just
 // calls setProjects(...) client-side; this endpoint is what turns that
 // into real, account-scoped persistence instead of a localStorage write.
+//
+// `?as=<ownerEmail>` reads/writes someone ELSE's territory instead of your
+// own. This is an internal tool restricted to @zuper.co accounts (see
+// api/auth/signup.js), so there's no separate grant/permission to check —
+// being a real, signed-in teammate IS the access control.
 export default async function handler(req, res) {
   const user = getSessionUser(req);
   if (!user) return res.status(401).json({ error: 'Not signed in.' });
 
+  const asEmail = typeof req.query.as === 'string' ? req.query.as.trim().toLowerCase() : null;
+  const targetEmail = asEmail && asEmail !== user.email ? asEmail : user.email;
+  const isBorrowedTerritory = targetEmail !== user.email;
+
   if (req.method === 'GET') {
     try {
-      const rows = await sql`SELECT projects_data FROM users WHERE email = ${user.email}`;
-      // The JWT session cookie is only a signature check — it never
-      // re-verifies the account it names still exists. If the row is
-      // gone (account deleted after the cookie was issued), say so
-      // explicitly rather than quietly handing back an empty project
-      // list that looks identical to "this account genuinely has none".
+      const rows = await sql`SELECT projects_data FROM users WHERE email = ${targetEmail}`;
       if (rows.length === 0) {
-        return res.status(401).json({ error: 'Your session refers to an account that no longer exists. Please sign in again.' });
+        return res.status(isBorrowedTerritory ? 404 : 401).json({
+          error: isBorrowedTerritory
+            ? 'That account no longer exists.'
+            : 'Your session refers to an account that no longer exists. Please sign in again.',
+        });
       }
       return res.status(200).json({ projects: rows[0].projects_data ?? [] });
     } catch (err) {
       console.error('GET /api/projects error', err);
-      return res.status(500).json({ error: 'Could not load your projects.' });
+      return res.status(500).json({ error: 'Could not load projects.' });
     }
   }
 
@@ -46,16 +54,20 @@ export default async function handler(req, res) {
       const rows = await sql`
         UPDATE users
         SET projects_data = ${JSON.stringify(body.projects)}::jsonb
-        WHERE email = ${user.email}
+        WHERE email = ${targetEmail}
         RETURNING id
       `;
       if (rows.length === 0) {
-        return res.status(401).json({ error: 'Your session refers to an account that no longer exists. Please sign in again.' });
+        return res.status(isBorrowedTerritory ? 404 : 401).json({
+          error: isBorrowedTerritory
+            ? 'That account no longer exists.'
+            : 'Your session refers to an account that no longer exists. Please sign in again.',
+        });
       }
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error('PUT /api/projects error', err);
-      return res.status(500).json({ error: 'Could not save your projects.' });
+      return res.status(500).json({ error: 'Could not save projects.' });
     }
   }
 

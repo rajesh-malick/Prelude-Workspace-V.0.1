@@ -1,29 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, RotateCcw, UserPlus, X } from 'lucide-react';
+import { LogOut, RotateCcw, MapPin } from 'lucide-react';
 
 // Anchored directly above the gear icon in NavDock, matching wherever the
 // dock currently sits (it shifts left while a Review is open).
-export default function SettingsPanel({
-  userName,
-  onSignOut,
-  onResetGrove,
-  onClose,
-  collaborators,
-  onInvite,
-  onRemoveCollaborator,
-  anchorLeft,
-}) {
+export default function SettingsPanel({ userName, onSignOut, onResetGrove, onClose, anchorLeft }) {
   const [confirmingReset, setConfirmingReset] = useState(false);
-  const [email, setEmail] = useState('');
-
-  const handleInvite = (e) => {
-    e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed) return;
-    onInvite?.(trimmed);
-    setEmail('');
-  };
 
   return (
     <motion.div
@@ -39,44 +21,13 @@ export default function SettingsPanel({
       <div className="mt-0.5 text-[13px] text-stone-500">Signed in as {userName}</div>
 
       <div className="mt-3.5 border-t border-black/5 pt-3.5">
-        <div className="text-[12.5px] font-semibold uppercase tracking-wide text-stone-400">Collaboration</div>
+        <div className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-stone-400">
+          <MapPin size={12} strokeWidth={2.5} /> Collaboration
+        </div>
         <p className="mt-1 text-[12.5px] leading-snug text-stone-500">
-          Invite teammates into your territory by email — mock only, nothing is actually sent.
+          Everyone at Zuper can view and edit each other's territory — use the Territory switcher up top to hop
+          into a teammate's Grove.
         </p>
-        <form onSubmit={handleInvite} className="mt-2 flex items-center gap-1.5">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="teammate@company.com"
-            className="min-w-0 flex-1 rounded-lg bg-black/5 px-2.5 py-1.5 text-[13px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
-          />
-          <button
-            type="submit"
-            disabled={!email.trim()}
-            aria-label="Invite"
-            className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-stone-800 text-white transition-opacity disabled:opacity-40"
-          >
-            <UserPlus size={14} strokeWidth={2} />
-          </button>
-        </form>
-        {collaborators?.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {collaborators.map((c) => (
-              <div key={c} className="flex items-center justify-between gap-2 rounded-lg bg-black/[0.03] px-2.5 py-1.5">
-                <span className="truncate text-[12.5px] text-stone-700">{c}</span>
-                <button
-                  type="button"
-                  onClick={() => onRemoveCollaborator?.(c)}
-                  aria-label={`Remove ${c}`}
-                  className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-stone-400 hover:bg-black/5 hover:text-stone-600"
-                >
-                  <X size={11} strokeWidth={2.5} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="mt-3.5 border-t border-black/5 pt-3.5">

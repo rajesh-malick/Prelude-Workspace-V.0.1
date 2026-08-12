@@ -54,7 +54,16 @@ function positionFor(comment, i) {
 // list) floating on top of it rather than competing with it for space.
 // Comments (butterflies) are pinned by clicking the exact spot on the
 // preview, like a real design-review tool — not auto-scattered.
-export default function ReviewOverlay({ project, version, onBack, onAddComment, onCycleCommentStatus, onAssignComment, readOnly }) {
+export default function ReviewOverlay({
+  project,
+  version,
+  onBack,
+  onAddComment,
+  onCycleCommentStatus,
+  onAssignComment,
+  people,
+  readOnly,
+}) {
   const [pin, setPin] = useState(null);
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
@@ -186,6 +195,7 @@ export default function ReviewOverlay({ project, version, onBack, onAddComment, 
             style={positionFor(c, i)}
             onCycleStatus={readOnly ? undefined : (newStatus) => onCycleCommentStatus?.(c.id, newStatus)}
             onAssign={readOnly ? undefined : (name) => onAssignComment?.(c.id, name)}
+            people={people}
           />
         ))}
 
@@ -406,6 +416,7 @@ export default function ReviewOverlay({ project, version, onBack, onAddComment, 
                         <AssigneePickerOrLabel
                           assignee={c.assignee}
                           readOnly={readOnly}
+                          people={people}
                           onChange={(name) => onAssignComment?.(c.id, name)}
                         />
                       </div>
@@ -421,9 +432,9 @@ export default function ReviewOverlay({ project, version, onBack, onAddComment, 
   );
 }
 
-function AssigneePickerOrLabel({ assignee, readOnly, onChange }) {
+function AssigneePickerOrLabel({ assignee, readOnly, people, onChange }) {
   if (readOnly) {
     return <span className="text-[12px] font-medium text-stone-600">{assignee ?? 'Unassigned'}</span>;
   }
-  return <AssigneePicker assignee={assignee ?? null} onChange={onChange} size="sm" />;
+  return <AssigneePicker assignee={assignee ?? null} onChange={onChange} people={people} size="sm" />;
 }

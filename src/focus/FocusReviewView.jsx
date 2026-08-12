@@ -31,7 +31,7 @@ const TAG_OPTIONS = [
 ];
 const TAG_ICON = { ui: Paintbrush, improvement: Star };
 
-function CommentRow({ comment, onCycleStatus, onAssign, dropUp }) {
+function CommentRow({ comment, onCycleStatus, onAssign, people, dropUp }) {
   const status = getStatus(comment);
   const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
 
@@ -53,7 +53,7 @@ function CommentRow({ comment, onCycleStatus, onAssign, dropUp }) {
       <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-black/5 pt-1.5">
         <span className="text-[11px] font-medium uppercase tracking-wide text-stone-600">Assigned to</span>
         {onAssign ? (
-          <AssigneePicker assignee={comment.assignee ?? null} onChange={onAssign} size="sm" dropUp={dropUp} />
+          <AssigneePicker assignee={comment.assignee ?? null} onChange={onAssign} people={people} size="sm" dropUp={dropUp} />
         ) : (
           <span className="text-[12px] font-medium text-stone-600">{comment.assignee ?? 'Unassigned'}</span>
         )}
@@ -65,7 +65,16 @@ function CommentRow({ comment, onCycleStatus, onAssign, dropUp }) {
 // Full-bleed, same idea as the Grove ReviewOverlay — the prototype gets the
 // whole screen, and version details / the comment list live behind a
 // toggleable sidebar instead of pushing the preview down the page.
-export default function FocusReviewView({ project, version, onBack, onAddComment, onCycleCommentStatus, onAssignComment, readOnly }) {
+export default function FocusReviewView({
+  project,
+  version,
+  onBack,
+  onAddComment,
+  onCycleCommentStatus,
+  onAssignComment,
+  people,
+  readOnly,
+}) {
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -258,6 +267,7 @@ export default function FocusReviewView({ project, version, onBack, onAddComment
                       comment={c}
                       onCycleStatus={readOnly ? undefined : onCycleCommentStatus}
                       onAssign={readOnly ? undefined : (name) => onAssignComment?.(c.id, name)}
+                      people={people}
                       dropUp={i === version.comments.length - 1 && version.comments.length > 1}
                     />
                   ))}

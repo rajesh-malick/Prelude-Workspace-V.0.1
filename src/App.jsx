@@ -25,7 +25,6 @@ import FocusDashboard from './focus/FocusDashboard';
 import FocusProjectView from './focus/FocusProjectView';
 import FocusReviewView from './focus/FocusReviewView';
 import { projects as seedProjects } from './data/projects';
-import { TEAMMATE_PROJECTS, TEAMMATES } from './data/teammates';
 import { getBloomWorldPosition } from './utils/treeGeometry';
 
 let nextId = 1000;
@@ -43,8 +42,15 @@ const genId = (prefix) => `${prefix}-${nextId++}`;
 // — genuinely different from "this account has zero projects", and the
 // caller needs to tell them apart to sign a stale session out instead of
 // quietly showing an empty Grove under a name that isn't really signed in.
-async function fetchProjects() {
-  const res = await fetch('/api/projects', { credentials: 'include' });
+// `asEmail` reads/writes someone ELSE's territory instead of your own (see
+// api/projects.js) — this is an internal tool, so any signed-in teammate
+// can already view and edit anyone else's territory, no separate grant.
+function projectsUrl(asEmail) {
+  return asEmail ? `/api/projects?as=${encodeURIComponent(asEmail)}` : '/api/projects';
+}
+
+async function fetchProjects(asEmail) {
+  const res = await fetch(projectsUrl(asEmail), { credentials: 'include' });
   if (res.status === 401) return { projects: [], sessionInvalid: true };
   if (!res.ok) return { projects: [], sessionInvalid: false };
   const data = await res.json();
@@ -55,8 +61,8 @@ async function fetchProjects() {
   return { projects, sessionInvalid: false };
 }
 
-async function saveProjects(projects) {
-  const res = await fetch('/api/projects', {
+async function saveProjects(projects, asEmail) {
+  const res = await fetch(projectsUrl(asEmail), {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -65,18 +71,11 @@ async function saveProjects(projects) {
   return { sessionInvalid: res.status === 401 };
 }
 
-// Mock "invited" teammates for the Collaboration settings section — local
-// only, no email is ever actually sent.
-const COLLAB_KEY = 'prelude-collaborators';
-
-function loadCollaborators() {
-  try {
-    const raw = localStorage.getItem(COLLAB_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return [];
+async function fetchTerritories() {
+  const res = await fetch('/api/territories', { credentials: 'include' });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data.territories) ? data.territories : [];
 }
 
 // genId() ids embed a counter (e.g. "c-1003") — after hydrating from
@@ -212,9 +211,18 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
+  // An email, or null for "my own Grove" — every other account at the
+  // company is a real, browsable territory (see /api/territories), not a
+  // handful of hardcoded mock teammates.
   const [viewingTerritory, setViewingTerritory] = useState(null);
   const [territoryNotices, setTerritoryNotices] = useState([]);
-  const [collaborators, setCollaborators] = useState(() => loadCollaborators());
+  const [territories, setTerritories] = useState([]);
+  const [territoriesLoadedFor, setTerritoriesLoadedFor] = useState(null);
+  // The territory being visited has its OWN loaded/saved projects, entirely
+  // separate from your own `projects` state above — switching back to "My
+  // Grove" doesn't touch either.
+  const [territoryProjects, setTerritoryProjects] = useState([]);
+  const [territoryLoadedFor, setTerritoryLoadedFor] = useState(null);
   const cameraRigRef = useRef(null);
   const germinationTimeoutRef = useRef(null);
   const { hour, elevation, sky } = useTimeOfDay();
@@ -226,18 +234,69 @@ export default function App() {
   useAmbientChirps(soundOn && mode === 'grove' && !isNight);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(COLLAB_KEY, JSON.stringify(collaborators));
-    } catch {
-      // ignore
-    }
-  }, [collaborators]);
+    if (!session?.email || territoriesLoadedFor === session.email) return;
+    let cancelled = false;
+    fetchTerritories().then((loaded) => {
+      if (cancelled) return;
+      setTerritories(loaded);
+      setTerritoriesLoadedFor(session.email);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, territoriesLoadedFor]);
 
-  // Browsing a teammate's territory is read-only and swaps which project
-  // set the Grove/Focus views render — your own data underneath is
-  // untouched and comes right back when you switch back to "My Grove".
-  const readOnly = Boolean(viewingTerritory);
-  const displayedProjects = viewingTerritory ? TEAMMATE_PROJECTS[viewingTerritory] ?? [] : projects;
+  useEffect(() => {
+    if (!viewingTerritory || territoryLoadedFor === viewingTerritory) return;
+    let cancelled = false;
+    fetchProjects(viewingTerritory).then(({ projects: loaded }) => {
+      if (cancelled) return;
+      // Ids minted while visiting a territory (a new comment, a new
+      // version) must not collide with ids already in ITS data, which the
+      // load effect for your own account has no way to know about.
+      nextId = Math.max(nextId, highestGenId(loaded) + 1);
+      setTerritoryProjects(loaded);
+      setTerritoryLoadedFor(viewingTerritory);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewingTerritory, territoryLoadedFor]);
+
+  useEffect(() => {
+    if (!viewingTerritory || territoryLoadedFor !== viewingTerritory) return;
+    saveProjects(territoryProjects, viewingTerritory).catch(() => {
+      // Network hiccup — same tradeoff as the own-account save effect below.
+    });
+  }, [territoryProjects, viewingTerritory, territoryLoadedFor]);
+
+  // Visiting a teammate's territory swaps which project set the Grove/Focus
+  // views render and edit — your own data underneath is untouched and
+  // comes right back when you switch back to "My Grove". Creating a brand
+  // new project or loading samples still only ever applies to your own
+  // account (see the Header's "New project" button and the Grove's
+  // "Load example projects" wiring below) — everything else (comments,
+  // versions, status, archive, delete) is fully editable either way.
+  const isVisitingOther = Boolean(viewingTerritory);
+  const displayedProjects = isVisitingOther ? territoryProjects : projects;
+
+  const updateProjects = useCallback(
+    (updater) => {
+      if (isVisitingOther) {
+        setTerritoryProjects((prev) => updater(prev));
+      } else {
+        setProjects((prev) => updater(prev));
+      }
+    },
+    [isVisitingOther]
+  );
+
+  // Everyone assignable on a comment — anyone at the company can be, since
+  // anyone can view and edit any territory.
+  const assignablePeople = useMemo(() => {
+    const names = [userName, ...territories.map((t) => t.ownerName)].filter(Boolean);
+    return [...new Set(names)];
+  }, [userName, territories]);
 
   const focusedProject = destination ? displayedProjects.find((p) => p.id === destination.projectId) ?? null : null;
   const focusedVersion =
@@ -391,33 +450,35 @@ export default function App() {
   }, []);
   const handleToggleSound = useCallback(() => setSoundOn((v) => !v), []);
 
-  // Simulates the "vice versa" notification a real teammate would get if
-  // they had a real account — there's nobody real on the other end, so
-  // this just fakes both halves of the exchange for you to see the idea.
-  const handleChangeTerritory = useCallback((teammateId) => {
-    setDestination(null);
-    setArrived(true);
-    setHoveredId(null);
-    setViewingTerritory(teammateId);
-    if (teammateId) {
-      const teammate = TEAMMATES.find((t) => t.id === teammateId);
-      const enterId = genId('notice');
-      setTerritoryNotices((prev) => [{ id: enterId, text: `You entered ${teammate.name}'s territory.` }, ...prev]);
-      setTimeout(() => {
-        setTerritoryNotices((prev) => [
-          { id: genId('notice'), text: `${teammate.name} noticed you exploring their grove.` },
-          ...prev,
-        ]);
-      }, 3000);
-    }
-  }, []);
-
-  const handleInviteCollaborator = useCallback((email) => {
-    setCollaborators((prev) => (prev.includes(email) ? prev : [...prev, email]));
-  }, []);
-  const handleRemoveCollaborator = useCallback((email) => {
-    setCollaborators((prev) => prev.filter((c) => c !== email));
-  }, []);
+  // Switching territory resets the previously-loaded territory data so the
+  // load effect above fetches fresh for whoever's next — otherwise a quick
+  // switch could briefly show the last-visited teammate's projects under
+  // the new one's name. The "noticed you exploring" toast is real-feeling
+  // flavor on top of a genuine visit (this really is a real other account's
+  // real data now), not a full presence system — nobody's actually notified.
+  const handleChangeTerritory = useCallback(
+    (ownerEmail) => {
+      setDestination(null);
+      setArrived(true);
+      setHoveredId(null);
+      setViewingTerritory(ownerEmail);
+      setTerritoryProjects([]);
+      setTerritoryLoadedFor(null);
+      if (ownerEmail) {
+        const owner = territories.find((t) => t.ownerEmail === ownerEmail);
+        const ownerName = owner?.ownerName ?? ownerEmail;
+        const enterId = genId('notice');
+        setTerritoryNotices((prev) => [{ id: enterId, text: `You entered ${ownerName}'s territory.` }, ...prev]);
+        setTimeout(() => {
+          setTerritoryNotices((prev) => [
+            { id: genId('notice'), text: `${ownerName} noticed you exploring their grove.` },
+            ...prev,
+          ]);
+        }, 3000);
+      }
+    },
+    [territories]
+  );
 
   // Lets an impatient user finish the current camera flight — or the
   // seed-germinating-into-a-tree animation right after planting — instantly
@@ -440,7 +501,7 @@ export default function App() {
   // the data (new butterfly/bloom render immediately) rather than mocking it.
   const handleAddComment = useCallback(
     (projectId, versionId, { text, tag, x, y }) => {
-      setProjects((prev) =>
+      updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
           return {
@@ -459,7 +520,7 @@ export default function App() {
         })
       );
     },
-    [userName]
+    [userName, updateProjects]
   );
 
   // Cycles a comment through open -> assigned -> reviewed -> resolved.
@@ -468,7 +529,7 @@ export default function App() {
   // separate decision — see handleAssignComment below.
   const handleCycleCommentStatus = useCallback(
     (projectId, versionId, commentId, newStatus) => {
-      setProjects((prev) =>
+      updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
           return {
@@ -488,7 +549,7 @@ export default function App() {
         })
       );
     },
-    [userName]
+    [userName, updateProjects]
   );
 
   // Assigning a COMMENT to a teammate (not a whole version — a version is
@@ -498,7 +559,7 @@ export default function App() {
   // picking "Unassigned" clears it without touching status otherwise.
   const handleAssignComment = useCallback(
     (projectId, versionId, commentId, assigneeName) => {
-      setProjects((prev) =>
+      updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
           return {
@@ -526,12 +587,12 @@ export default function App() {
         })
       );
     },
-    [userName]
+    [userName, updateProjects]
   );
 
   const handleCreateVersion = useCallback(
     (projectId, payload) => {
-      setProjects((prev) =>
+      updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
           const version = {
@@ -555,7 +616,7 @@ export default function App() {
       );
       setCreatingVersionFor(null);
     },
-    [userName]
+    [userName, updateProjects]
   );
 
   // Removing a version also backs out of it if it's the one currently
@@ -564,10 +625,10 @@ export default function App() {
   // removes the project itself, and its tree vanishes from the Grove.
   const handleDeleteVersion = useCallback(
     (projectId, versionId) => {
-      const project = projects.find((p) => p.id === projectId);
+      const project = displayedProjects.find((p) => p.id === projectId);
       const isLastVersion = (project?.versions.length ?? 0) <= 1;
 
-      setProjects((prev) =>
+      updateProjects((prev) =>
         prev.flatMap((p) => {
           if (p.id !== projectId) return [p];
           const versions = p.versions.filter((v) => v.id !== versionId);
@@ -584,27 +645,35 @@ export default function App() {
       });
       if (isLastVersion) setArrived(false);
     },
-    [projects]
+    [displayedProjects, updateProjects]
   );
 
   // A direct way to remove a whole project in one step — deleting every
   // version one at a time (the only option before) worked but was tedious.
-  const handleDeleteProject = useCallback((projectId) => {
-    setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    setDestination((d) => (d?.projectId === projectId ? null : d));
-    setArrived(true);
-  }, []);
+  const handleDeleteProject = useCallback(
+    (projectId) => {
+      updateProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setDestination((d) => (d?.projectId === projectId ? null : d));
+      setArrived(true);
+    },
+    [updateProjects]
+  );
 
   // Archived is an organizational status, not a lock — an archived project
   // still opens, still takes new versions/comments, it just drops out of
   // Focus mode's default project list (see FocusDashboard's "Archived"
   // filter) until restored. Grove's 3D view is unaffected on purpose —
   // archiving is a Focus-mode list concept, not "delete the tree."
-  const handleToggleArchive = useCallback((projectId) => {
-    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, archived: !p.archived } : p)));
-  }, []);
+  const handleToggleArchive = useCallback(
+    (projectId) => {
+      updateProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, archived: !p.archived } : p)));
+    },
+    [updateProjects]
+  );
 
-  const creatingVersionProject = creatingVersionFor ? projects.find((p) => p.id === creatingVersionFor) ?? null : null;
+  const creatingVersionProject = creatingVersionFor
+    ? displayedProjects.find((p) => p.id === creatingVersionFor) ?? null
+    : null;
 
   // A convenience for seeing a populated Grove without planting anything
   // by hand — only offered while the Grove is actually empty. Tagged
@@ -703,6 +772,7 @@ export default function App() {
         mode={mode}
         onChangeMode={handleChangeMode}
         onCreateProject={() => setCreatingProject(true)}
+        territories={territories}
         viewingTerritory={viewingTerritory}
         onChangeTerritory={handleChangeTerritory}
       />
@@ -728,7 +798,7 @@ export default function App() {
                 onHoverEnd={handleHoverEnd}
                 onSelect={handleSelect}
                 onOpenReview={handleOpenReview}
-                onLoadExamples={readOnly ? undefined : handleLoadExamples}
+                onLoadExamples={isVisitingOther ? undefined : handleLoadExamples}
                 showEmptyCard={!showWelcome}
                 justPlantedId={justPlantedId}
                 allowOrbit={!destination}
@@ -758,8 +828,8 @@ export default function App() {
                 onOpenVersion={(versionId) => handleOpenReview(focusedProject.id, versionId)}
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
-                onDeleteProject={readOnly ? undefined : handleDeleteProject}
-                readOnly={readOnly}
+                onDeleteProject={handleDeleteProject}
+                readOnly={false}
               />
             )}
             {arrived && destination?.kind === 'bloom' && focusedProject && focusedVersion && (
@@ -775,7 +845,8 @@ export default function App() {
                 onAssignComment={(commentId, assigneeName) =>
                   handleAssignComment(focusedProject.id, focusedVersion.id, commentId, assigneeName)
                 }
-                readOnly={readOnly}
+                people={assignablePeople}
+                readOnly={false}
               />
             )}
           </AnimatePresence>
@@ -811,7 +882,7 @@ export default function App() {
                 projects={displayedProjects}
                 userName={userName}
                 onOpenProject={handleFocusSelect}
-                onRemoveSamples={readOnly ? undefined : handleRemoveSampleProjects}
+                onRemoveSamples={isVisitingOther ? undefined : handleRemoveSampleProjects}
               />
             )}
             {destination?.kind === 'project' && focusedProject && (
@@ -822,9 +893,9 @@ export default function App() {
                 onOpenVersion={(versionId) => handleFocusOpenReview(focusedProject.id, versionId)}
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
-                onDeleteProject={readOnly ? undefined : handleDeleteProject}
-                onToggleArchive={readOnly ? undefined : handleToggleArchive}
-                readOnly={readOnly}
+                onDeleteProject={handleDeleteProject}
+                onToggleArchive={handleToggleArchive}
+                readOnly={false}
               />
             )}
             {destination?.kind === 'bloom' && focusedProject && focusedVersion && (
@@ -840,7 +911,8 @@ export default function App() {
                 onAssignComment={(commentId, assigneeName) =>
                   handleAssignComment(focusedProject.id, focusedVersion.id, commentId, assigneeName)
                 }
-                readOnly={readOnly}
+                people={assignablePeople}
+                readOnly={false}
               />
             )}
           </AnimatePresence>
@@ -893,9 +965,6 @@ export default function App() {
             onSignOut={handleSignOut}
             onResetGrove={handleResetGrove}
             onClose={() => setSettingsOpen(false)}
-            collaborators={collaborators}
-            onInvite={handleInviteCollaborator}
-            onRemoveCollaborator={handleRemoveCollaborator}
             anchorLeft={destination?.kind === 'bloom'}
           />
         )}

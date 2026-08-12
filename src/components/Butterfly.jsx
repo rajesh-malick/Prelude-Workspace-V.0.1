@@ -13,7 +13,7 @@ const TAG_ICON = { ui: Paintbrush, improvement: Star };
 const TAG_LABEL = { ui: 'UI improvement', improvement: 'Improvement' };
 const TAG_ACCENT = { ui: 'text-sky-600', improvement: 'text-amber-500' };
 
-export default function Butterfly({ comment, style, onCycleStatus, onAssign }) {
+export default function Butterfly({ comment, style, onCycleStatus, onAssign, people }) {
   const [open, setOpen] = useState(false);
   const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
   const status = getStatus(comment);
@@ -102,7 +102,13 @@ export default function Butterfly({ comment, style, onCycleStatus, onAssign }) {
               )}
               <div className="flex items-center gap-1">
                 {onAssign && (
-                  <AssigneePicker assignee={comment.assignee ?? null} onChange={(name) => onAssign(name)} size="sm" dropUp={dropUp} />
+                  <AssigneePicker
+                    assignee={comment.assignee ?? null}
+                    onChange={(name) => onAssign(name)}
+                    people={people}
+                    size="sm"
+                    dropUp={dropUp}
+                  />
                 )}
                 <StatusDropdown status={status} onChange={(s) => onCycleStatus?.(s)} size="sm" dropUp={dropUp} />
               </div>

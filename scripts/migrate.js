@@ -21,7 +21,14 @@ async function migrate() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS projects_data JSONB NOT NULL DEFAULT '[]'::jsonb
   `;
-  console.log('Migration complete: users table (with projects_data) is ready.');
+  // Who this account has granted access to their territory, and at what
+  // level — [{ email, permission: 'view' | 'edit' }, ...]. Lives on the
+  // OWNER's row (it's their grant to give), and gets scanned across all
+  // rows by /api/territories to answer "whose territory can I see".
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS access_grants JSONB NOT NULL DEFAULT '[]'::jsonb
+  `;
+  console.log('Migration complete: users table (with projects_data, access_grants) is ready.');
 }
 
 migrate().catch((err) => {
