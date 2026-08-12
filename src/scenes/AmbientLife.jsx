@@ -141,7 +141,7 @@ function AmbientButterfly({ seed }) {
 // Purely decorative — never interactive, never blocks pointer events —
 // just background life to keep the Grove from feeling static. Skipped
 // entirely under reduced motion.
-export default function AmbientLife({ reducedMotion }) {
+export default function AmbientLife({ reducedMotion, isNight }) {
   const birds = useMemo(() => Array.from({ length: 5 }, (_, i) => i * 37.1), []);
   const butterflies = useMemo(() => Array.from({ length: 9 }, (_, i) => i * 19.7 + 300), []);
 
@@ -149,9 +149,12 @@ export default function AmbientLife({ reducedMotion }) {
 
   return (
     <group>
-      {birds.map((seed) => (
-        <AmbientBird key={seed} seed={seed} />
-      ))}
+      {/* Birds roost after dark — real ones don't circle overhead at
+          midnight, and the chirping ambience already pauses for the same
+          reason (see useAmbientChirps' call site). Butterflies are left
+          flying; whether they're realistic at night matters far less than
+          the Grove not going completely lifeless once the sky darkens. */}
+      {!isNight && birds.map((seed) => <AmbientBird key={seed} seed={seed} />)}
       {butterflies.map((seed) => (
         <AmbientButterfly key={seed} seed={seed} />
       ))}

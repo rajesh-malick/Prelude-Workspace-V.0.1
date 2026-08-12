@@ -21,6 +21,7 @@ export default function GroveScene({
   showNameTags = true,
   elevation,
   sky,
+  isNight,
 }) {
   return (
     <>
@@ -38,7 +39,7 @@ export default function GroveScene({
           across the clearing, ringed by a wall of background trees so the
           Grove reads as a clearing IN a forest, not a lot on its own */}
       <ForestFloor />
-      <AmbientLife reducedMotion={reducedMotion} />
+      <AmbientLife reducedMotion={reducedMotion} isNight={isNight} />
 
       {projects.length === 0 ? (
         <EmptySeed onLoadExamples={onLoadExamples} showCard={showEmptyCard} />

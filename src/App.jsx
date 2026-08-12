@@ -7,6 +7,7 @@ import CameraRig, { OVERVIEW_POS } from './scenes/CameraRig';
 import useReducedMotion from './hooks/useReducedMotion';
 import useAmbientChirps from './hooks/useAmbientChirps';
 import useTimeOfDay from './hooks/useTimeOfDay';
+import { getPhase } from './utils/timeOfDay';
 import { GERMINATION_SCENE_URL, GERMINATION_SCENE_DURATION } from './components/GerminationSpline';
 import Header from './components/Header';
 import NavDock from './components/NavDock';
@@ -217,8 +218,12 @@ export default function App() {
   const cameraRigRef = useRef(null);
   const germinationTimeoutRef = useRef(null);
   const { hour, elevation, sky } = useTimeOfDay();
+  const isNight = getPhase(hour) === 'night';
 
-  useAmbientChirps(soundOn && mode === 'grove');
+  // Real birds go quiet and out of sight after dark — chirping (and the
+  // birds themselves, see GroveScene/AmbientLife below) pause overnight
+  // instead of playing on a loop regardless of the Grove's own lighting.
+  useAmbientChirps(soundOn && mode === 'grove' && !isNight);
 
   useEffect(() => {
     try {
@@ -731,6 +736,7 @@ export default function App() {
                 showNameTags={showNameTags}
                 elevation={elevation}
                 sky={sky}
+                isNight={isNight}
               />
               <CameraRig
                 ref={cameraRigRef}

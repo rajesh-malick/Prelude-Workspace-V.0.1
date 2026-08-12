@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Paintbrush, Star, Send, File as FileIcon, PanelRightOpen, PanelRightClose, Eye } from 'lucide-react';
+import {
+  ArrowLeft,
+  Paintbrush,
+  Star,
+  MessageSquare,
+  Send,
+  File as FileIcon,
+  PanelRightOpen,
+  PanelRightClose,
+  Eye,
+} from 'lucide-react';
 import { getStatus, getStatusNote } from '../utils/commentStatus';
 import StatusDropdown from '../components/StatusDropdown';
 import AssigneePicker from '../components/AssigneePicker';
@@ -15,7 +25,7 @@ const STATUS_LABEL = {
 const ASSET_KIND_LABEL = { image: 'Image', video: 'Video', html: 'HTML prototype', file: 'File' };
 
 const TAG_OPTIONS = [
-  { value: null, label: 'Note', Icon: null },
+  { value: null, label: 'Note', Icon: MessageSquare },
   { value: 'ui', label: 'UI improvement', Icon: Paintbrush },
   { value: 'improvement', label: 'Improvement', Icon: Star },
 ];
@@ -32,7 +42,7 @@ function CommentRow({ comment, onCycleStatus, onAssign, dropUp }) {
           {comment.author}
           {TagIcon && (
             <span className="text-stone-500" title={comment.tag === 'ui' ? 'UI improvement' : 'Improvement'}>
-              <TagIcon size={11} strokeWidth={2.5} />
+              <TagIcon size={13} strokeWidth={2.5} />
             </span>
           )}
         </div>
@@ -262,11 +272,12 @@ export default function FocusReviewView({ project, version, onBack, onAddComment
                           type="button"
                           onClick={() => setTag(opt.value)}
                           title={opt.label}
-                          className={`flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-colors ${
+                          aria-pressed={tag === opt.value}
+                          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
                             tag === opt.value ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-700'
                           }`}
                         >
-                          {opt.Icon && <opt.Icon size={11} strokeWidth={2.5} />}
+                          <opt.Icon size={13} strokeWidth={2.5} />
                           {opt.label}
                         </button>
                       ))}

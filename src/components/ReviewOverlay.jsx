@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Paintbrush, Star, Send, File as FileIcon, X, PanelRightOpen, PanelRightClose, Eye } from 'lucide-react';
+import {
+  ArrowLeft,
+  Paintbrush,
+  Star,
+  MessageSquare,
+  Send,
+  File as FileIcon,
+  X,
+  PanelRightOpen,
+  PanelRightClose,
+  Eye,
+} from 'lucide-react';
 import Butterfly from './Butterfly';
 import StatusDropdown from './StatusDropdown';
 import AssigneePicker from './AssigneePicker';
@@ -28,7 +39,7 @@ const FALLBACK_SLOTS = [
 ];
 
 const TAG_OPTIONS = [
-  { value: null, label: 'Note', Icon: null },
+  { value: null, label: 'Note', Icon: MessageSquare },
   { value: 'ui', label: 'UI improvement', Icon: Paintbrush },
   { value: 'improvement', label: 'Improvement', Icon: Star },
 ];
@@ -204,18 +215,26 @@ export default function ReviewOverlay({ project, version, onBack, onAddComment, 
                 }}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 rounded-full bg-black/5 p-0.5">
+                  <div className="flex items-center gap-1 rounded-full bg-black/5 p-1">
+                    {/* Icon-only at 11px with no label (and "Note" had no
+                        icon at all, so that button was just... blank) read
+                        as barely-there — every option now always shows its
+                        icon at a size that actually reads, plus its label
+                        once selected so the choice stays visible afterward. */}
                     {TAG_OPTIONS.map((opt) => (
                       <button
                         key={opt.label}
                         type="button"
                         onClick={() => setTag(opt.value)}
                         title={opt.label}
-                        className={`flex items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium transition-colors ${
+                        aria-label={opt.label}
+                        aria-pressed={tag === opt.value}
+                        className={`flex items-center gap-1 rounded-full px-2 py-1.5 text-[12px] font-medium transition-colors ${
                           tag === opt.value ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
                         }`}
                       >
-                        {opt.Icon && <opt.Icon size={11} strokeWidth={2.5} />}
+                        <opt.Icon size={14} strokeWidth={2.25} />
+                        {tag === opt.value && opt.label}
                       </button>
                     ))}
                   </div>
@@ -370,8 +389,8 @@ export default function ReviewOverlay({ project, version, onBack, onAddComment, 
                         <div className="flex items-center gap-1.5 text-[13px] font-semibold text-stone-800">
                           {c.author}
                           {CommentTagIcon && (
-                            <span className="text-stone-400" title={TAG_LABEL[c.tag]}>
-                              <CommentTagIcon size={11} strokeWidth={2.5} />
+                            <span className="text-stone-500" title={TAG_LABEL[c.tag]}>
+                              <CommentTagIcon size={13} strokeWidth={2.5} />
                             </span>
                           )}
                         </div>
