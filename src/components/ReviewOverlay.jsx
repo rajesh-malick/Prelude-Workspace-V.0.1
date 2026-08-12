@@ -70,14 +70,15 @@ export default function ReviewOverlay({
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // A live embedded webpage needs real scroll/click access to itself (an
-  // iframe with pointer-events disabled can't be scrolled at all) — an
-  // iframe also never bubbles its own clicks out to this page's JS, so
-  // "click anywhere to pin a comment" can't work directly over it either
-  // way. This arms a one-shot transparent overlay on top of the iframe
-  // instead: the embed stays fully interactive until you deliberately ask
-  // to drop a pin, place it with the next click, then it reverts.
-  const [pinArmed, setPinArmed] = useState(false);
+  // A cross-origin iframe (any pasted external link) is a hard either/or:
+  // either it receives clicks itself (so it's scrollable/interactive), or
+  // clicks pass through to this page's click-to-pin handler — never both
+  // for the same click, no matter what CSS trick is tried, because the
+  // iframe's content lives in another browsing context this page's JS
+  // can't reach into. Comment-anywhere is the default (matching image/
+  // video previews); scrolling the embed is the deliberate, explicit
+  // toggle instead of the other way around.
+  const [browsingEmbed, setBrowsingEmbed] = useState(false);
   const previewRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -89,7 +90,7 @@ export default function ReviewOverlay({
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
         setPin(null);
-        setPinArmed(false);
+        setBrowsingEmbed(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -97,14 +98,13 @@ export default function ReviewOverlay({
   }, []);
 
   const handlePreviewClick = (e) => {
-    if (readOnly) return;
+    if (readOnly || browsingEmbed) return;
     const rect = previewRef.current.getBoundingClientRect();
     const x = Math.min(96, Math.max(4, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.min(96, Math.max(4, ((e.clientY - rect.top) / rect.height) * 100));
     setPin({ x, y });
     setDraft('');
     setTag(null);
-    setPinArmed(false);
   };
 
   // Keyboard equivalent of clicking a spot on the preview — there's no
@@ -116,7 +116,7 @@ export default function ReviewOverlay({
   // itself (which lives inside this same div) — without it, hitting the
   // spacebar while typing kept re-centering the pin and wiping the draft.
   const handlePreviewKeyDown = (e) => {
-    if (readOnly || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+    if (readOnly || browsingEmbed || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
     e.preventDefault();
     setPin({ x: 50, y: 50 });
     setDraft('');
@@ -159,8 +159,10 @@ export default function ReviewOverlay({
         onKeyDown={handlePreviewKeyDown}
         role="button"
         tabIndex={0}
-        aria-label={readOnly ? 'Prototype preview.' : 'Prototype preview. Press Enter to leave a comment.'}
-        className={`absolute inset-0 ${readOnly ? 'cursor-default' : 'cursor-crosshair'}`}
+        aria-label={
+          readOnly || browsingEmbed ? 'Prototype preview.' : 'Prototype preview. Press Enter to leave a comment.'
+        }
+        className={`absolute inset-0 ${readOnly || browsingEmbed ? 'cursor-default' : 'cursor-crosshair'}`}
         style={{
           background: version.assetUrl ? '#111' : `linear-gradient(135deg, ${project.color}33, ${project.color}11)`,
         }}
@@ -182,38 +184,38 @@ export default function ReviewOverlay({
         )}
         {assetKind === 'html' && (
           <>
-            {/* Interactive, not pointer-events-none — a disabled iframe
-                can't be scrolled at all, which matters a lot when this is
-                a real webpage link rather than a small self-contained
-                mockup. Trade-off: its own clicks never bubble out to this
-                page's JS (separate browsing context), so "click anywhere
-                to pin a comment" happens via the armed overlay below
-                instead of directly on the iframe. */}
+            {/* pointer-events-none by default so clicks fall through to
+                the outer div's click-to-pin handler above (comment-
+                anywhere, same as image/video) — flips to auto only while
+                deliberately "browsing", which is what makes it scrollable/
+                interactive, since a disabled iframe can't be scrolled at
+                all either. */}
             <iframe
               src={version.assetUrl}
               title={version.label}
-              className="absolute inset-0 h-full w-full border-0 bg-white"
+              className={`absolute inset-0 h-full w-full border-0 bg-white ${browsingEmbed ? '' : 'pointer-events-none'}`}
             />
-            {!readOnly && pinArmed && (
-              <div
-                onClick={handlePreviewClick}
-                role="button"
-                tabIndex={-1}
-                aria-label="Click to place your comment"
-                className="absolute inset-0 z-10 cursor-crosshair bg-black/10"
-              >
-                <div className="glass-surface absolute left-1/2 top-4 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-stone-700">
-                  Click anywhere to place your comment
-                </div>
+            {browsingEmbed && (
+              <div className="glass-surface absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-stone-700">
+                Browsing — scroll and click the page freely
               </div>
             )}
-            {!readOnly && !pinArmed && (
+            {!readOnly && (
               <button
                 type="button"
-                onClick={() => setPinArmed(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBrowsingEmbed((v) => !v);
+                }}
                 className="glass-surface absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900"
               >
-                <MessageSquarePlus size={14} strokeWidth={2.25} /> Add a comment
+                {browsingEmbed ? (
+                  <>
+                    <MessageSquarePlus size={14} strokeWidth={2.25} /> Done — comment again
+                  </>
+                ) : (
+                  'Scroll or browse the page'
+                )}
               </button>
             )}
             {/* Some sites refuse to be framed at all (X-Frame-Options /
@@ -224,6 +226,7 @@ export default function ReviewOverlay({
               href={version.assetUrl}
               target="_blank"
               rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="glass-surface absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-stone-700 transition-colors hover:text-stone-900"
             >
               <ExternalLink size={12} strokeWidth={2.25} /> Open in new tab
