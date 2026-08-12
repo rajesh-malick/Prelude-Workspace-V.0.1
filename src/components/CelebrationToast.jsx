@@ -12,12 +12,15 @@ export default function CelebrationToast({ title, text, onDismiss }) {
   }, [onDismiss]);
 
   return (
+    // Bottom-right, not top-center — the moment this fires (right after
+    // creating a project/version) is exactly when the New Version modal
+    // auto-opens centered on screen, and the two were overlapping.
     <motion.div
-      initial={{ opacity: 0, y: -16, scale: 0.96 }}
+      initial={{ opacity: 0, y: 16, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -16, scale: 0.96 }}
+      exit={{ opacity: 0, y: 16, scale: 0.96 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="glass-surface fixed left-1/2 top-24 z-40 w-[340px] -translate-x-1/2 rounded-2xl p-4"
+      className="glass-surface fixed bottom-24 right-6 z-40 w-[340px] rounded-2xl p-4"
     >
       <div className="flex items-start gap-3">
         <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-amber-500/15 text-amber-600">

@@ -9,8 +9,8 @@ import {
   File as FileIcon,
   PanelRightOpen,
   PanelRightClose,
-  Eye,
   ExternalLink,
+  MapPin,
 } from 'lucide-react';
 import { getStatus, getStatusNote } from '../utils/commentStatus';
 import StatusDropdown from '../components/StatusDropdown';
@@ -75,6 +75,7 @@ export default function FocusReviewView({
   onAssignComment,
   people,
   readOnly,
+  visitingOwnerName,
 }) {
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
@@ -161,9 +162,9 @@ export default function FocusReviewView({
         </button>
         <h2 className="min-w-0 flex-1 truncate text-center text-[18px] font-semibold text-stone-800">{version.label}</h2>
         <div className="flex flex-none items-center gap-2.5">
-          {readOnly && (
-            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-[12.5px] font-medium text-emerald-700">
-              <Eye size={13} strokeWidth={2} /> Read-only
+          {visitingOwnerName && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1.5 text-[12.5px] font-medium text-amber-700">
+              <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
             </div>
           )}
           <div className="flex items-center gap-1.5 text-[13px] text-stone-600">

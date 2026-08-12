@@ -21,20 +21,27 @@ const STEPS = [
 
 export default function WelcomeToast({ name, onDismiss }) {
   const [step, setStep] = useState(0);
+  // A hovering user is actively reading it — the whole point of extending
+  // the timer was so nobody gets cut off mid-sentence, so hovering pauses
+  // it outright rather than just running a bit longer.
+  const [paused, setPaused] = useState(false);
   const current = STEPS[step];
 
   useEffect(() => {
+    if (paused) return;
     const t = setTimeout(() => {
       setStep((s) => (s < STEPS.length - 1 ? s + 1 : s));
       if (step === STEPS.length - 1) onDismiss();
-    }, 7000);
+    }, 12000);
     return () => clearTimeout(t);
-  }, [step, onDismiss]);
+  }, [step, paused, onDismiss]);
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
         key={step}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
         initial={{ opacity: 0, y: -16, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -16, scale: 0.96 }}

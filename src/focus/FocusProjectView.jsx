@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore, MapPin } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
@@ -38,10 +38,11 @@ export default function FocusProjectView({
   onDeleteVersion,
   onToggleArchive,
   onDeleteProject,
-  readOnly,
+  visitingOwnerName,
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
   const [confirmingDeleteProject, setConfirmingDeleteProject] = useState(false);
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
   const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
@@ -54,6 +55,15 @@ export default function FocusProjectView({
       transition={{ duration: 0.25 }}
       className="mx-auto max-w-4xl px-8 pb-40 pt-28"
     >
+      {/* Persistent reminder you're not in your own Grove — every control
+          on this page has full edit rights on someone else's data, and
+          it's easy to forget that a few clicks deep. */}
+      {visitingOwnerName && (
+        <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] font-medium text-amber-700">
+          <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -62,7 +72,7 @@ export default function FocusProjectView({
         >
           <ArrowLeft size={14} strokeWidth={2} /> Projects
         </button>
-        {!readOnly && onDeleteProject && (
+        {onDeleteProject && (
           <button
             type="button"
             onClick={() => setConfirmingDeleteProject(true)}
@@ -78,8 +88,8 @@ export default function FocusProjectView({
       {confirmingDeleteProject && (
         <div className="mt-3 rounded-xl bg-red-50 px-4 py-3">
           <div className="text-[13px] font-medium text-red-700">
-            Delete "{project.name}" and all {project.versions.length} version{project.versions.length === 1 ? '' : 's'}?
-            This can't be undone.
+            Delete {visitingOwnerName ? `${visitingOwnerName}'s` : ''} "{project.name}" and all{' '}
+            {project.versions.length} version{project.versions.length === 1 ? '' : 's'}? This can't be undone.
           </div>
           <div className="mt-1.5 flex items-center gap-3">
             <button
@@ -131,10 +141,20 @@ export default function FocusProjectView({
               </div>
             ))}
           </div>
-          {!readOnly && onToggleArchive && (
+          {onToggleArchive && (
             <button
               type="button"
-              onClick={() => onToggleArchive(project.id)}
+              onClick={() => {
+                // Only confirm when it's not your own project — archiving
+                // your own is low-stakes and already reversible, but doing
+                // it to someone else's by mistake a few clicks into their
+                // territory is exactly the slip this is meant to catch.
+                if (visitingOwnerName) {
+                  setConfirmingArchive(true);
+                } else {
+                  onToggleArchive(project.id);
+                }
+              }}
               title={project.archived ? 'Restore from archive' : 'Archive project'}
               className="flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-2 text-[12.5px] font-medium text-stone-600 ring-1 ring-black/5 transition-colors hover:bg-white"
             >
@@ -148,6 +168,33 @@ export default function FocusProjectView({
           )}
         </div>
       </div>
+
+      {confirmingArchive && (
+        <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3">
+          <div className="text-[13px] font-medium text-amber-800">
+            {project.archived ? 'Restore' : 'Archive'} {visitingOwnerName}'s "{project.name}"?
+          </div>
+          <div className="mt-1.5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                onToggleArchive(project.id);
+                setConfirmingArchive(false);
+              }}
+              className="text-[12.5px] font-semibold text-amber-800 hover:underline"
+            >
+              {project.archived ? 'Restore' : 'Archive'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingArchive(false)}
+              className="text-[12.5px] font-medium text-stone-500 hover:text-stone-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 flex items-center gap-8 rounded-2xl bg-white/70 px-6 py-4 text-[13px] ring-1 ring-black/5">
         <div>
@@ -164,7 +211,7 @@ export default function FocusProjectView({
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-[15px] font-semibold text-stone-800">Versions</h2>
-        {!readOnly && (
+        {onRequestNewVersion && (
           <button
             type="button"
             onClick={onRequestNewVersion}
@@ -238,7 +285,7 @@ export default function FocusProjectView({
                   <ChevronRight size={15} strokeWidth={2} className="text-stone-300" />
                 </div>
               </button>
-              {!readOnly && (
+              {onDeleteVersion && (
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(v.id)}

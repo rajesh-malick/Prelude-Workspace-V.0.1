@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, Eye } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, MapPin } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
@@ -42,7 +42,7 @@ export default function ProjectOverlay({
   onRequestNewVersion,
   onDeleteVersion,
   onDeleteProject,
-  readOnly,
+  visitingOwnerName,
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
   const [confirmingDeleteProject, setConfirmingDeleteProject] = useState(false);
@@ -58,7 +58,19 @@ export default function ProjectOverlay({
       transition={{ duration: 0.45, ease: 'easeOut' }}
       className="fixed right-6 top-24 z-20 w-[320px]"
     >
-      <div className="glass-surface rounded-2xl p-5">
+      <div
+        className="glass-surface rounded-2xl p-5"
+        style={visitingOwnerName ? { boxShadow: 'inset 3px 0 0 #C98A2E, var(--shadow)' } : undefined}
+      >
+        {/* Persistent reminder you're not in your own Grove — every control
+            here (delete, new version) has full edit rights on someone
+            else's data, and it's easy to forget that a few clicks deep. */}
+        {visitingOwnerName && (
+          <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[12.5px] font-medium text-amber-700">
+            <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+          </div>
+        )}
+
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
@@ -67,7 +79,7 @@ export default function ProjectOverlay({
           >
             <ArrowLeft size={15} strokeWidth={2} /> Grove
           </button>
-          {!readOnly && onDeleteProject && (
+          {onDeleteProject && (
             <button
               type="button"
               onClick={() => setConfirmingDeleteProject(true)}
@@ -83,7 +95,8 @@ export default function ProjectOverlay({
         {confirmingDeleteProject && (
           <div className="mb-3 rounded-lg bg-red-50 px-3 py-2.5">
             <div className="text-[13px] font-medium text-red-700">
-              Delete "{project.name}" and all {project.versions.length} version
+              Delete {visitingOwnerName ? `${visitingOwnerName}'s` : ''} "{project.name}" and all{' '}
+              {project.versions.length} version
               {project.versions.length === 1 ? '' : 's'}? This can't be undone.
             </div>
             <div className="mt-1.5 flex items-center gap-3">
@@ -105,12 +118,6 @@ export default function ProjectOverlay({
                 Cancel
               </button>
             </div>
-          </div>
-        )}
-
-        {readOnly && (
-          <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 text-[12.5px] font-medium text-emerald-700">
-            <Eye size={13} strokeWidth={2} /> Read-only — you're visiting this territory
           </div>
         )}
 
@@ -199,7 +206,7 @@ export default function ProjectOverlay({
                       {v.comments.length > 0 && <span className="ml-1.5 text-stone-400">· {v.comments.length}</span>}
                     </span>
                   </button>
-                  {!readOnly && (
+                  {onDeleteVersion && (
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(v.id)}
@@ -217,7 +224,7 @@ export default function ProjectOverlay({
               <div className="px-2 py-1.5 text-[13px] text-stone-400">No versions yet</div>
             )}
           </div>
-          {!readOnly && (
+          {onRequestNewVersion && (
             <button
               type="button"
               onClick={onRequestNewVersion}

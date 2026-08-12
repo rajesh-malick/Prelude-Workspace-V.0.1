@@ -10,9 +10,9 @@ import {
   X,
   PanelRightOpen,
   PanelRightClose,
-  Eye,
   ExternalLink,
   MessageSquarePlus,
+  MapPin,
 } from 'lucide-react';
 import Butterfly from './Butterfly';
 import StatusDropdown from './StatusDropdown';
@@ -65,6 +65,7 @@ export default function ReviewOverlay({
   onAssignComment,
   people,
   readOnly,
+  visitingOwnerName,
 }) {
   const [pin, setPin] = useState(null);
   const [draft, setDraft] = useState('');
@@ -359,9 +360,9 @@ export default function ReviewOverlay({
         </button>
         <h2 className="min-w-0 flex-1 truncate text-center text-[18px] font-semibold text-stone-800">{version.label}</h2>
         <div className="flex flex-none items-center gap-2.5">
-          {readOnly && (
-            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-[12.5px] font-medium text-emerald-700">
-              <Eye size={13} strokeWidth={2} /> Read-only
+          {visitingOwnerName && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1.5 text-[12.5px] font-medium text-amber-700">
+              <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
             </div>
           )}
           <div className="flex items-center gap-1.5 text-[13px] text-stone-600">

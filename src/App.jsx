@@ -341,6 +341,9 @@ export default function App() {
   // versions, status, archive, delete) is fully editable either way.
   const isVisitingOther = Boolean(viewingTerritory);
   const displayedProjects = isVisitingOther ? territoryProjects : projects;
+  const visitingOwnerName = isVisitingOther
+    ? territories.find((t) => t.ownerEmail === viewingTerritory)?.ownerName ?? viewingTerritory
+    : null;
 
   const updateProjects = useCallback(
     (updater) => {
@@ -543,7 +546,7 @@ export default function App() {
         const owner = territories.find((t) => t.ownerEmail === ownerEmail);
         const ownerName = owner?.ownerName ?? ownerEmail;
         setTerritoryNotices((prev) => [
-          { id: genId('notice'), text: `You entered ${ownerName}'s territory.` },
+          { id: genId('notice'), text: `You entered ${ownerName}'s territory.`, createdAt: new Date().toISOString() },
           ...prev,
         ]);
         notify(ownerEmail, `${userName} visited your territory.`);
@@ -915,7 +918,7 @@ export default function App() {
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
                 onDeleteProject={handleDeleteProject}
-                readOnly={false}
+                visitingOwnerName={visitingOwnerName}
               />
             )}
             {arrived && destination?.kind === 'bloom' && focusedProject && focusedVersion && (
@@ -933,6 +936,7 @@ export default function App() {
                 }
                 people={assignablePeople}
                 readOnly={false}
+                visitingOwnerName={visitingOwnerName}
               />
             )}
           </AnimatePresence>
@@ -981,7 +985,7 @@ export default function App() {
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
                 onDeleteProject={handleDeleteProject}
                 onToggleArchive={handleToggleArchive}
-                readOnly={false}
+                visitingOwnerName={visitingOwnerName}
               />
             )}
             {destination?.kind === 'bloom' && focusedProject && focusedVersion && (
@@ -999,6 +1003,7 @@ export default function App() {
                 }
                 people={assignablePeople}
                 readOnly={false}
+                visitingOwnerName={visitingOwnerName}
               />
             )}
           </AnimatePresence>

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Paintbrush, Star, MapPin } from 'lucide-react';
 import { getStatus, STATUS_META } from '../utils/commentStatus';
+import { formatRelativeTime } from '../utils/relativeTime';
 
 const TAG_ICON = { ui: Paintbrush, improvement: Star };
 
@@ -24,7 +25,15 @@ function collectRecent(projects, limit) {
 // dock currently sits (it shifts left while a Review is open).
 export default function NotificationsPanel({ projects, territoryNotices = [], notifications = [], onClose, onOpen, anchorLeft }) {
   const items = collectRecent(projects, 8);
-  const hasNotices = territoryNotices.length > 0 || notifications.length > 0;
+  // Merge the two visit sources (your own local "you entered X" toasts and
+  // the real, persisted "X visited you" notifications) into one
+  // newest-first list, kept visually and structurally separate from the
+  // comment feed below it — mixing them with no way to tell them apart
+  // (and no sense of when) was the actual complaint.
+  const visits = [...territoryNotices, ...notifications].sort(
+    (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
+  );
+  const hasVisits = visits.length > 0;
 
   return (
     <motion.div
@@ -38,24 +47,30 @@ export default function NotificationsPanel({ projects, territoryNotices = [], no
     >
       <div className="border-b border-black/5 px-4 py-3 text-[15px] font-semibold text-stone-800">Activity</div>
       <div className="max-h-[360px] overflow-y-auto p-1.5">
-        {items.length === 0 && !hasNotices && (
+        {items.length === 0 && !hasVisits && (
           <div className="px-3 py-6 text-center text-[13.5px] text-stone-400">No comments yet across any project</div>
         )}
-        {territoryNotices.map((notice) => (
-          <div key={notice.id} className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-[13px] text-stone-700">
-            <MapPin size={14} strokeWidth={2} className="mt-0.5 flex-none text-emerald-600" />
-            {notice.text}
+        {hasVisits && (
+          <div className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+            Territory visits
+          </div>
+        )}
+        {visits.map((v) => (
+          <div key={v.id} className="flex items-start justify-between gap-2 rounded-xl px-3 py-2.5 text-[13px] text-stone-700">
+            <div className="flex items-start gap-2">
+              <MapPin size={14} strokeWidth={2} className="mt-0.5 flex-none text-sky-600" />
+              {v.text}
+            </div>
+            {v.createdAt && (
+              <span className="flex-none text-[11px] text-stone-400">{formatRelativeTime(v.createdAt)}</span>
+            )}
           </div>
         ))}
-        {/* Real, persisted notifications — someone else really did visit
-            your territory, this isn't simulated on your behalf. */}
-        {notifications.map((n) => (
-          <div key={n.id} className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-[13px] text-stone-700">
-            <MapPin size={14} strokeWidth={2} className="mt-0.5 flex-none text-sky-600" />
-            {n.text}
+        {hasVisits && items.length > 0 && (
+          <div className="px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+            Comments
           </div>
-        ))}
-        {hasNotices && items.length > 0 && <div className="my-1 border-t border-black/5" />}
+        )}
         {items.map(({ project, version, comment }) => {
           const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
           const status = getStatus(comment);
