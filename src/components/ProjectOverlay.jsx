@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, Eye } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
+import { avatarColor } from '../utils/avatarColor';
 
 // All copy here uses real product terms (Project/Versions/Status) per the
 // brief — the nature metaphor is a rendering choice for the 3D layer only.
@@ -139,7 +140,8 @@ export default function ProjectOverlay({
               <div
                 key={name}
                 title={name}
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-stone-200 text-[12.5px] font-semibold text-stone-700"
+                style={{ backgroundColor: avatarColor(name).bg, color: avatarColor(name).fg }}
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[12.5px] font-semibold"
               >
                 {name.charAt(0).toUpperCase()}
               </div>

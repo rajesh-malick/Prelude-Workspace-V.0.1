@@ -52,6 +52,10 @@ export default function HoverPanel({ project }) {
       ) : (
         <div className="mt-2 border-t border-black/5 pt-2 text-[12px] text-stone-400">No comments yet</div>
       )}
+
+      <div className="mt-2 border-t border-black/5 pt-2 text-[10.5px] text-stone-400">
+        Click to fly in · Shift-click to jump instantly
+      </div>
     </motion.div>
   );
 }

@@ -156,7 +156,7 @@ export default function Tree({
         const dy = e.clientY - start.y;
         if (Math.hypot(dx, dy) < 6) {
           e.stopPropagation();
-          onSelect?.(project.id);
+          onSelect?.(project.id, { instant: e.shiftKey });
         }
       }}
     >
@@ -166,6 +166,18 @@ export default function Tree({
       <mesh position={[0, 0.02, 0]} scale={[1, 0.22, 1]}>
         <sphereGeometry args={[0.32, 20, 12]} />
         <meshStandardMaterial color="#B89A72" roughness={1} />
+      </mesh>
+
+      {/* Invisible, slightly-oversized hit zone around just the trunk — its
+          real geometry is a thin tapered cylinder (radius 0.09-0.16), too
+          narrow a target to click reliably. Deliberately kept short and
+          narrow (not spanning up into the canopy) so it can't shadow the
+          individually-clickable blooms sitting further out at branch tips
+          once this tree is focused. The pointer handlers live on the outer
+          group above; this only needs to bubble a hit up to them. */}
+      <mesh position={[0, trunkHeight / 2, 0]} visible={false}>
+        <cylinderGeometry args={[0.22, 0.28, trunkHeight, 8]} />
+        <meshBasicMaterial />
       </mesh>
 
       {/* A freshly-planted project sits as a seed in the soil first, then

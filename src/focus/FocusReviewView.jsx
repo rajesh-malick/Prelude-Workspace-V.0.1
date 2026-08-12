@@ -158,7 +158,11 @@ export default function FocusReviewView({ project, version, onBack, onAddComment
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 24 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="glass-surface absolute bottom-4 right-4 top-20 z-20 flex w-[320px] flex-col overflow-hidden rounded-2xl"
+            // bottom-24 (not bottom-4) so this clears the fixed NavDock —
+            // the dock sits at bottom-6 and is ~64px tall, and the comment
+            // composer lives at the bottom of this very panel, so anything
+            // less left the dock overlapping the input on shorter viewports.
+            className="glass-surface absolute bottom-24 right-4 top-20 z-20 flex w-[320px] flex-col overflow-hidden rounded-2xl"
           >
             {/* Toggle between the two things that used to compete for space
                 on the page — only one is ever on screen at a time. */}

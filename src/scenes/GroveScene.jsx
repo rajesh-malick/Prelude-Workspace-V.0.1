@@ -14,6 +14,7 @@ export default function GroveScene({
   onSelect,
   onOpenReview,
   onLoadExamples,
+  showEmptyCard = true,
   justPlantedId,
   allowOrbit,
   reducedMotion,
@@ -40,7 +41,7 @@ export default function GroveScene({
       <AmbientLife reducedMotion={reducedMotion} />
 
       {projects.length === 0 ? (
-        <EmptySeed onLoadExamples={onLoadExamples} />
+        <EmptySeed onLoadExamples={onLoadExamples} showCard={showEmptyCard} />
       ) : (
         projects.map((project) => (
           <Tree

@@ -50,23 +50,24 @@ const CameraRig = forwardRef(function CameraRig({ focus, onSettled, reducedMotio
       // keeping it clear of the right-docked ProjectOverlay panel.
       destPos = { x: px * 0.55, y: 2.1, z: pz + 3.6 };
       destLook = { x: px + 1.1, y: 1.5, z: pz };
-      duration = 1.5;
+      duration = 1.05;
     } else if (focus?.kind === 'bloom') {
       const [bx, by, bz] = focus.position;
       destPos = { x: bx + 0.55, y: by + 0.25, z: bz + 0.9 };
       destLook = { x: bx, y: by, z: bz };
-      duration = 1.1;
+      duration = 0.8;
     } else {
       destPos = OVERVIEW_POS;
       destLook = OVERVIEW_LOOKAT;
-      duration = 1.3;
+      duration = 0.95;
     }
 
-    // Reduced motion means "cut, don't fly" — the destination is reached
-    // in a single frame instead of a 1-1.5s flythrough, but `onSettled`
-    // still fires so overlays gate open exactly the same way.
+    // Reduced motion (or an instant/repeat-visit jump — see `focus.instant`
+    // below) means "cut, don't fly": the destination is reached in a single
+    // frame instead of a ~1s flythrough, but `onSettled` still fires so
+    // overlays gate open exactly the same way.
     const tl = gsap.timeline({ onComplete: () => onSettled?.() });
-    const d = reducedMotion ? 0.001 : duration;
+    const d = reducedMotion || focus?.instant ? 0.001 : duration;
     tl.to(camera.position, { ...destPos, duration: d, ease: 'power2.inOut' }, 0);
     tl.to(
       lookAt.current,

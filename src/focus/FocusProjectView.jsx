@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
+import { avatarColor } from '../utils/avatarColor';
 
 const STATUS_LABEL = {
   active: 'Active',
@@ -51,7 +52,7 @@ export default function FocusProjectView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 8 }}
       transition={{ duration: 0.25 }}
-      className="mx-auto max-w-4xl px-8 pb-28 pt-28"
+      className="mx-auto max-w-4xl px-8 pb-40 pt-28"
     >
       <div className="flex items-center justify-between">
         <button
@@ -123,7 +124,8 @@ export default function FocusProjectView({
               <div
                 key={name}
                 title={name}
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-stone-200 text-[12px] font-semibold text-stone-700"
+                style={{ backgroundColor: avatarColor(name).bg, color: avatarColor(name).fg }}
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[12px] font-semibold"
               >
                 {name.charAt(0).toUpperCase()}
               </div>

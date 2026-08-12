@@ -1,13 +1,16 @@
-// A comment's lifecycle: raised, picked up, looked at, done. Legacy/seed
-// comments only ever had `resolved: boolean` — getStatus() treats that as
-// the source of truth until a real `status` is set on the comment.
-// "Open" is the implicit starting state every comment is born into — it's
-// not offered in the dropdown below since there's nothing useful about
-// re-selecting the state you're already leaving.
-export const STATUS_ORDER = ['assigned', 'reviewed', 'resolved'];
+// A comment's lifecycle: raised, picked up, looked at, done — and back
+// again, since a comment can always be reopened (a wrong resolve, or new
+// info surfacing on something already reviewed). Legacy/seed comments only
+// ever had `resolved: boolean` — getStatus() treats that as the source of
+// truth until a real `status` is set on the comment.
+export const STATUS_ORDER = ['open', 'assigned', 'reviewed', 'resolved'];
 
 export const STATUS_META = {
-  open: { label: 'Open', color: '#A8A29E' },
+  // Darker than the other neutrals on purpose — this is the default status
+  // every comment starts in, so it's also the most commonly displayed one,
+  // and the original pale grey (#A8A29E) read as barely-there against the
+  // app's light glass-surface backgrounds.
+  open: { label: 'Open', color: '#57534E' },
   assigned: { label: 'Assigned', color: '#3E7FB0' },
   reviewed: { label: 'Reviewed', color: '#8B6FB0' },
   resolved: { label: 'Resolved', color: '#4E9A5C' },

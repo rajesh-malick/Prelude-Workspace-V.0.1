@@ -244,7 +244,7 @@ export default function App() {
     if (!destination) return null;
     const project = displayedProjects.find((p) => p.id === destination.projectId);
     if (!project) return null;
-    if (destination.kind === 'project') return { kind: 'project', project };
+    if (destination.kind === 'project') return { kind: 'project', project, instant: destination.instant };
     if (destination.kind === 'bloom') {
       const version = project.versions.find((v) => v.id === destination.versionId);
       if (!version) return null;
@@ -312,11 +312,14 @@ export default function App() {
   const handleHoverEnd = useCallback((id) => setHoveredId((cur) => (cur === id ? null : cur)), []);
 
   const handleSelect = useCallback(
-    (id) => {
+    // `instant` is the shift-click fast path for a returning visitor who
+    // already knows this tree and doesn't want to sit through the flight
+    // again — the camera cuts straight there instead of tweening.
+    (id, { instant } = {}) => {
       if (destination) return;
       setHoveredId(null);
       setArrived(false);
-      setDestination({ kind: 'project', projectId: id });
+      setDestination({ kind: 'project', projectId: id, instant });
     },
     [destination]
   );
@@ -721,6 +724,7 @@ export default function App() {
                 onSelect={handleSelect}
                 onOpenReview={handleOpenReview}
                 onLoadExamples={readOnly ? undefined : handleLoadExamples}
+                showEmptyCard={!showWelcome}
                 justPlantedId={justPlantedId}
                 allowOrbit={!destination}
                 reducedMotion={reducedMotion}
@@ -778,7 +782,7 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, delay: 0.3 }}
+                transition={{ duration: 0.15 }}
                 className="glass-surface fixed bottom-24 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-medium text-stone-600 transition-colors hover:text-stone-900"
               >
                 Skip <ChevronsRight size={13} strokeWidth={2.5} />

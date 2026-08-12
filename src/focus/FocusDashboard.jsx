@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ChevronDown, ArrowUpDown, X } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
 import { parseElapsedMinutes } from '../utils/relativeTime';
+import { avatarColor } from '../utils/avatarColor';
 
 const STATUS_LABEL = {
   active: 'Active',
@@ -45,6 +46,17 @@ function updatedMinutesAgo(project) {
   return Math.min(...project.versions.map((v) => parseElapsedMinutes(v.createdAt)), Infinity);
 }
 
+// "Mine" means genuinely involved, not just "the one who created version 1"
+// — that original definition missed anyone who joined a project later by
+// commenting on or getting assigned a piece of feedback on it, which read
+// as the filter being broken (0 results right after visibly participating).
+function isMine(project, userName) {
+  if (!userName) return false;
+  return project.versions.some(
+    (v) => v.owner === userName || v.comments.some((c) => c.author === userName || c.assignee === userName)
+  );
+}
+
 function applyFilter(projects, filterKey, userName) {
   const notArchived = projects.filter((p) => !p.archived);
   switch (filterKey) {
@@ -53,7 +65,7 @@ function applyFilter(projects, filterKey, userName) {
     case 'active':
       return notArchived.filter((p) => p.status === 'active');
     case 'mine':
-      return notArchived.filter((p) => p.versions[0]?.owner === userName);
+      return notArchived.filter((p) => isMine(p, userName));
     case 'needs-review':
       return notArchived.filter((p) => p.status === 'review pending');
     default:
@@ -223,7 +235,8 @@ function ProjectCard({ project, onOpen }) {
           <div
             key={name}
             title={name}
-            className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-stone-200 text-[10px] font-semibold text-stone-700"
+            style={{ backgroundColor: avatarColor(name).bg, color: avatarColor(name).fg }}
+            className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-semibold"
           >
             {name.charAt(0).toUpperCase()}
           </div>
@@ -254,7 +267,11 @@ export default function FocusDashboard({ projects, userName, onOpenProject, onRe
   const sampleCount = projects.filter((p) => p.isSample).length;
 
   return (
-    <div className="mx-auto max-w-5xl px-8 pb-28 pt-28">
+    // pb-40, not pb-28 — the fixed NavDock is ~88px tall sitting at
+    // bottom-6, and the smaller padding left its blurred glass surface
+    // sitting directly over the last row of project cards on shorter
+    // viewports instead of clearing it.
+    <div className="mx-auto max-w-5xl px-8 pb-40 pt-28">
       <div>
         <h1 className="text-[22px] font-semibold text-stone-800">Projects</h1>
         <p className="mt-1 text-[13px] text-stone-500">
@@ -301,8 +318,12 @@ export default function FocusDashboard({ projects, userName, onOpenProject, onRe
           <div className="text-[15px] font-semibold text-stone-700">
             {projects.length === 0 ? 'No projects yet' : 'No projects match this filter'}
           </div>
-          <p className="mt-1 text-[12.5px] text-stone-500">
-            {projects.length === 0 ? 'Create your first project to get started.' : 'Try a different filter above.'}
+          <p className="mt-1 max-w-[280px] text-[12.5px] text-stone-500">
+            {projects.length === 0
+              ? 'Create your first project to get started.'
+              : filterKey === 'mine'
+                ? "This shows projects where you own a version, or you're the author or assignee on a comment."
+                : 'Try a different filter above.'}
           </p>
         </div>
       ) : (
