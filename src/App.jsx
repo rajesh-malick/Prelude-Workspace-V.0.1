@@ -458,6 +458,12 @@ export default function App() {
       if (!arrived || destination?.kind !== 'project' || destination.projectId !== projectId) return;
       setArrived(false);
       setDestination({ kind: 'bloom', projectId, versionId });
+      // The NavDock that opens these is hidden on the Review surface (see
+      // its render below) — closing them on the way in avoids a panel
+      // being left stranded open there with no dock icon left to close it.
+      setSettingsOpen(false);
+      setNotificationsOpen(false);
+      setSearchOpen(false);
     },
     [arrived, destination]
   );
@@ -481,6 +487,9 @@ export default function App() {
   }, []);
   const handleFocusOpenReview = useCallback((projectId, versionId) => {
     setDestination({ kind: 'bloom', projectId, versionId });
+    setSettingsOpen(false);
+    setNotificationsOpen(false);
+    setSearchOpen(false);
   }, []);
   const handleFocusBackToProject = useCallback(() => {
     setDestination((d) => (d?.kind === 'bloom' ? { kind: 'project', projectId: d.projectId } : d));
@@ -1074,16 +1083,24 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <NavDock
-        onHome={mode === 'grove' ? handleGoHome : handleFocusGoHome}
-        onOpenSearch={() => setSearchOpen(true)}
-        onOpenNotifications={handleToggleNotifications}
-        onOpenSettings={handleToggleSettings}
-        hasUnreadNotifications={notifications.length > lastSeenNotificationCount}
-        soundOn={soundOn}
-        onToggleSound={handleToggleSound}
-        asideForReview={destination?.kind === 'bloom'}
-      />
+      {/* Hidden on the Review surface (destination.kind === 'bloom') on
+          product-design advice — Home/Search/Settings/Sound/Notifications
+          are all global-app concerns that don't belong on a focused
+          annotation canvas, and the dock's bottom-center position was a
+          real click target collision with pins dropped near the bottom
+          of an asset. Getting back out is already covered by the Review
+          surface's own back arrow. */}
+      {destination?.kind !== 'bloom' && (
+        <NavDock
+          onHome={mode === 'grove' ? handleGoHome : handleFocusGoHome}
+          onOpenSearch={() => setSearchOpen(true)}
+          onOpenNotifications={handleToggleNotifications}
+          onOpenSettings={handleToggleSettings}
+          hasUnreadNotifications={notifications.length > lastSeenNotificationCount}
+          soundOn={soundOn}
+          onToggleSound={handleToggleSound}
+        />
+      )}
     </div>
     </MotionConfig>
   );

@@ -22,15 +22,10 @@ export default function NavDock({
   hasUnreadNotifications,
   soundOn,
   onToggleSound,
-  asideForReview,
 }) {
   const handlers = { onHome, onOpenSearch, onOpenNotifications, onOpenSettings };
   return (
-    <div
-      className={`fixed bottom-6 z-[35] transition-all duration-300 ease-out ${
-        asideForReview ? 'left-6 translate-x-0' : 'left-1/2 -translate-x-1/2'
-      }`}
-    >
+    <div className="fixed bottom-6 left-1/2 z-[35] -translate-x-1/2">
       <div className="glass-surface flex items-center gap-1 rounded-full px-2 py-2">
         {ITEMS.map(({ icon: Icon, label }) => (
           <button
