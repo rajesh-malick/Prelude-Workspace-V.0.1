@@ -71,15 +71,18 @@ export default function ReviewOverlay({
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // A cross-origin iframe (any pasted external link) is a hard either/or:
-  // either it receives clicks itself (so it's scrollable/interactive), or
-  // clicks pass through to this page's click-to-pin handler — never both
-  // for the same click, no matter what CSS trick is tried, because the
-  // iframe's content lives in another browsing context this page's JS
-  // can't reach into. Comment-anywhere is the default (matching image/
-  // video previews); scrolling the embed is the deliberate, explicit
-  // toggle instead of the other way around.
-  const [browsingEmbed, setBrowsingEmbed] = useState(false);
+  // Both a native <video controls> element and a cross-origin iframe (any
+  // pasted external link) have the same either/or: either the element
+  // receives clicks itself (so you can hit play/seek, or scroll/click a
+  // live page), or clicks pass through to this page's click-to-pin handler
+  // — never both for the same click. For the iframe case that's a hard
+  // browser security boundary (its content lives in another browsing
+  // context this page's JS can never reach into); for video it's just
+  // that a disabled control bar can't be clicked either. Comment-anywhere
+  // is the default (matching plain image previews, which have no
+  // controls to fight over); interacting with the asset itself is the
+  // deliberate, explicit toggle instead of the other way around.
+  const [assetInteractive, setAssetInteractive] = useState(false);
   const previewRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -91,7 +94,7 @@ export default function ReviewOverlay({
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
         setPin(null);
-        setBrowsingEmbed(false);
+        setAssetInteractive(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -99,7 +102,7 @@ export default function ReviewOverlay({
   }, []);
 
   const handlePreviewClick = (e) => {
-    if (readOnly || browsingEmbed) return;
+    if (readOnly || assetInteractive) return;
     const rect = previewRef.current.getBoundingClientRect();
     const x = Math.min(96, Math.max(4, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.min(96, Math.max(4, ((e.clientY - rect.top) / rect.height) * 100));
@@ -117,7 +120,7 @@ export default function ReviewOverlay({
   // itself (which lives inside this same div) — without it, hitting the
   // spacebar while typing kept re-centering the pin and wiping the draft.
   const handlePreviewKeyDown = (e) => {
-    if (readOnly || browsingEmbed || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+    if (readOnly || assetInteractive || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
     e.preventDefault();
     setPin({ x: 50, y: 50 });
     setDraft('');
@@ -161,9 +164,9 @@ export default function ReviewOverlay({
         role="button"
         tabIndex={0}
         aria-label={
-          readOnly || browsingEmbed ? 'Prototype preview.' : 'Prototype preview. Press Enter to leave a comment.'
+          readOnly || assetInteractive ? 'Prototype preview.' : 'Prototype preview. Press Enter to leave a comment.'
         }
-        className={`absolute inset-0 ${readOnly || browsingEmbed ? 'cursor-default' : 'cursor-crosshair'}`}
+        className={`absolute inset-0 ${readOnly || assetInteractive ? 'cursor-default' : 'cursor-crosshair'}`}
         style={{
           background: version.assetUrl ? '#111' : `linear-gradient(135deg, ${project.color}33, ${project.color}11)`,
         }}
@@ -177,26 +180,50 @@ export default function ReviewOverlay({
           />
         )}
         {assetKind === 'video' && (
-          <video
-            src={version.assetUrl}
-            controls
-            className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-          />
+          <>
+            {/* pointer-events-none by default, same reasoning as the html
+                case below — a disabled control bar can't be played/
+                seeked/muted either, so that only happens once you
+                deliberately ask to interact with the video itself. */}
+            <video
+              src={version.assetUrl}
+              controls
+              className={`absolute inset-0 h-full w-full object-contain ${assetInteractive ? '' : 'pointer-events-none'}`}
+            />
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAssetInteractive((v) => !v);
+                }}
+                className="glass-surface absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900"
+              >
+                {assetInteractive ? (
+                  <>
+                    <MessageSquarePlus size={14} strokeWidth={2.25} /> Done — comment again
+                  </>
+                ) : (
+                  'Play or control the video'
+                )}
+              </button>
+            )}
+          </>
         )}
         {assetKind === 'html' && (
           <>
             {/* pointer-events-none by default so clicks fall through to
                 the outer div's click-to-pin handler above (comment-
-                anywhere, same as image/video) — flips to auto only while
-                deliberately "browsing", which is what makes it scrollable/
-                interactive, since a disabled iframe can't be scrolled at
-                all either. */}
+                anywhere, same as image previews) — flips to auto only
+                while deliberately "browsing", which is what makes it
+                scrollable/interactive, since a disabled iframe can't be
+                scrolled at all either. */}
             <iframe
               src={version.assetUrl}
               title={version.label}
-              className={`absolute inset-0 h-full w-full border-0 bg-white ${browsingEmbed ? '' : 'pointer-events-none'}`}
+              className={`absolute inset-0 h-full w-full border-0 bg-white ${assetInteractive ? '' : 'pointer-events-none'}`}
             />
-            {browsingEmbed && (
+            {assetInteractive && (
               <div className="glass-surface absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-stone-700">
                 Browsing — scroll and click the page freely
               </div>
@@ -206,11 +233,11 @@ export default function ReviewOverlay({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setBrowsingEmbed((v) => !v);
+                  setAssetInteractive((v) => !v);
                 }}
                 className="glass-surface absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900"
               >
-                {browsingEmbed ? (
+                {assetInteractive ? (
                   <>
                     <MessageSquarePlus size={14} strokeWidth={2.25} /> Done — comment again
                   </>
