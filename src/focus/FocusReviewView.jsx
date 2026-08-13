@@ -130,7 +130,7 @@ export default function FocusReviewView({
               href={version.assetUrl}
               target="_blank"
               rel="noreferrer"
-              className="glass-surface absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-stone-700 transition-colors hover:text-stone-900"
+              className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-stone-900/85 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-stone-900"
             >
               <ExternalLink size={12} strokeWidth={2.25} /> Open in new tab
             </a>
@@ -152,22 +152,28 @@ export default function FocusReviewView({
         )}
       </div>
 
-      <div className="glass-surface pointer-events-auto absolute left-4 right-4 top-4 z-20 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
+      {/* Dark, mostly-opaque bar rather than the light glass-surface used
+          elsewhere — this overlays an arbitrary uploaded image/video/
+          webpage, which can be light-colored just as easily as dark, and
+          a light frosted panel over light content read as nearly
+          invisible. Kept slim so it doesn't cover an embedded page's own
+          header (see Grove's ReviewOverlay for the same fix). */}
+      <div className="pointer-events-auto absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-2 rounded-xl bg-stone-900/85 px-3 py-1.5 text-white backdrop-blur-md">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
+          className="inline-flex min-w-0 flex-none items-center gap-1 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
         >
-          <ArrowLeft size={15} strokeWidth={2} /> {project.name}
+          <ArrowLeft size={13} strokeWidth={2} /> <span className="truncate">{project.name}</span>
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-center text-[18px] font-semibold text-stone-800">{version.label}</h2>
-        <div className="flex flex-none items-center gap-2.5">
+        <h2 className="min-w-0 flex-1 truncate text-center text-[13.5px] font-semibold text-white">{version.label}</h2>
+        <div className="flex flex-none items-center gap-1.5">
           {visitingOwnerName && (
-            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1.5 text-[12.5px] font-medium text-amber-700">
-              <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+            <div className="hidden items-center gap-1 rounded-full bg-amber-400/20 px-2 py-1 text-[11px] font-medium text-amber-200 sm:flex">
+              <MapPin size={11} strokeWidth={2} /> Editing {visitingOwnerName}'s
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-[13px] text-stone-600">
+          <div className="hidden items-center gap-1 text-[11.5px] text-stone-300 sm:flex">
             <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
             {STATUS_LABEL[version.status] ?? version.status}
           </div>
@@ -177,11 +183,11 @@ export default function FocusReviewView({
             title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
             aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
             aria-pressed={sidebarOpen}
-            className={`flex h-9 w-9 flex-none items-center justify-center rounded-full transition-colors ${
-              sidebarOpen ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-black/5 hover:text-stone-700'
+            className={`flex h-7 w-7 flex-none items-center justify-center rounded-full transition-colors ${
+              sidebarOpen ? 'bg-white text-stone-900' : 'text-stone-300 hover:bg-white/10 hover:text-white'
             }`}
           >
-            {sidebarOpen ? <PanelRightClose size={17} strokeWidth={2} /> : <PanelRightOpen size={17} strokeWidth={2} />}
+            {sidebarOpen ? <PanelRightClose size={15} strokeWidth={2} /> : <PanelRightOpen size={15} strokeWidth={2} />}
           </button>
         </div>
       </div>

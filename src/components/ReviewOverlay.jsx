@@ -180,72 +180,29 @@ export default function ReviewOverlay({
           />
         )}
         {assetKind === 'video' && (
-          <>
-            {/* pointer-events-none by default, same reasoning as the html
-                case below — a disabled control bar can't be played/
-                seeked/muted either, so that only happens once you
-                deliberately ask to interact with the video itself. */}
-            <video
-              src={version.assetUrl}
-              controls
-              className={`absolute inset-0 h-full w-full object-contain ${assetInteractive ? '' : 'pointer-events-none'}`}
-            />
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAssetInteractive((v) => !v);
-                }}
-                className="glass-surface absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900"
-              >
-                {assetInteractive ? (
-                  <>
-                    <MessageSquarePlus size={14} strokeWidth={2.25} /> Done — comment again
-                  </>
-                ) : (
-                  'Play or control the video'
-                )}
-              </button>
-            )}
-          </>
+          // pointer-events-none by default, same reasoning as the html case
+          // below — a disabled control bar can't be played/seeked/muted
+          // either, so that only happens once you deliberately ask to
+          // interact with the video itself (toggle lives in the header now).
+          <video
+            src={version.assetUrl}
+            controls
+            className={`absolute inset-0 h-full w-full object-contain ${assetInteractive ? '' : 'pointer-events-none'}`}
+          />
         )}
         {assetKind === 'html' && (
           <>
             {/* pointer-events-none by default so clicks fall through to
                 the outer div's click-to-pin handler above (comment-
                 anywhere, same as image previews) — flips to auto only
-                while deliberately "browsing", which is what makes it
-                scrollable/interactive, since a disabled iframe can't be
-                scrolled at all either. */}
+                while deliberately "browsing" (toggle lives in the header
+                now), which is what makes it scrollable/interactive, since
+                a disabled iframe can't be scrolled at all either. */}
             <iframe
               src={version.assetUrl}
               title={version.label}
               className={`absolute inset-0 h-full w-full border-0 bg-white ${assetInteractive ? '' : 'pointer-events-none'}`}
             />
-            {assetInteractive && (
-              <div className="glass-surface absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-stone-700">
-                Browsing — scroll and click the page freely
-              </div>
-            )}
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAssetInteractive((v) => !v);
-                }}
-                className="glass-surface absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900"
-              >
-                {assetInteractive ? (
-                  <>
-                    <MessageSquarePlus size={14} strokeWidth={2.25} /> Done — comment again
-                  </>
-                ) : (
-                  'Scroll or browse the page'
-                )}
-              </button>
-            )}
             {/* Some sites refuse to be framed at all (X-Frame-Options /
                 CSP) and this renders as a silent blank iframe with no error
                 — a working link out is the fallback so "no preview" never
@@ -255,7 +212,7 @@ export default function ReviewOverlay({
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="glass-surface absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-stone-700 transition-colors hover:text-stone-900"
+              className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-stone-900/85 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-stone-900"
             >
               <ExternalLink size={12} strokeWidth={2.25} /> Open in new tab
             </a>
@@ -375,38 +332,67 @@ export default function ReviewOverlay({
         )}
       </div>
 
-      {/* Floating header — title, status, controls. Overlaid on the
-          full-bleed preview rather than pushing it down. */}
-      <div className="glass-surface pointer-events-auto absolute left-4 right-4 top-4 z-20 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
+      {/* Floating header — title, status, controls. A fixed dark, mostly-
+          opaque bar rather than the light "glass-surface" used everywhere
+          else: this overlays an arbitrary uploaded image/video/webpage,
+          which can just as easily be light-colored as dark, and a light
+          frosted panel over light content was reading as nearly invisible.
+          Dark-on-anything holds contrast regardless of what's underneath.
+          Deliberately slim (not the taller glass-surface padding used
+          elsewhere) so it stops covering an embedded page's own header. */}
+      <div className="pointer-events-auto absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-2 rounded-xl bg-stone-900/85 px-3 py-1.5 text-white backdrop-blur-md">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-stone-600 transition-colors hover:text-stone-900"
+          className="inline-flex min-w-0 flex-none items-center gap-1 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
         >
-          <ArrowLeft size={15} strokeWidth={2} /> {project.name}
+          <ArrowLeft size={13} strokeWidth={2} /> <span className="truncate">{project.name}</span>
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-center text-[18px] font-semibold text-stone-800">{version.label}</h2>
-        <div className="flex flex-none items-center gap-2.5">
+        <h2 className="min-w-0 flex-1 truncate text-center text-[13.5px] font-semibold text-white">{version.label}</h2>
+        <div className="flex flex-none items-center gap-1.5">
           {visitingOwnerName && (
-            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1.5 text-[12.5px] font-medium text-amber-700">
-              <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+            <div className="hidden items-center gap-1 rounded-full bg-amber-400/20 px-2 py-1 text-[11px] font-medium text-amber-200 sm:flex">
+              <MapPin size={11} strokeWidth={2} /> Editing {visitingOwnerName}'s
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-[13px] text-stone-600">
+          <div className="hidden items-center gap-1 text-[11.5px] text-stone-300 sm:flex">
             <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
             {STATUS_LABEL[version.status] ?? version.status}
           </div>
+          {/* The click-anywhere-to-comment / interact-with-the-asset toggle
+              — moved up here from the bottom of the canvas so switching
+              modes doesn't mean a trip across the whole screen every time. */}
+          {!readOnly && (assetKind === 'video' || assetKind === 'html') && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAssetInteractive((v) => !v);
+              }}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                assetInteractive ? 'bg-white text-stone-900' : 'bg-white/10 text-stone-200 hover:bg-white/20'
+              }`}
+            >
+              {assetInteractive ? (
+                <>
+                  <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
+                </>
+              ) : (
+                'Cursor mode'
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setSidebarOpen((v) => !v)}
             title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
             aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
             aria-pressed={sidebarOpen}
-            className={`flex h-9 w-9 flex-none items-center justify-center rounded-full transition-colors ${
-              sidebarOpen ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-black/5 hover:text-stone-700'
+            className={`flex h-7 w-7 flex-none items-center justify-center rounded-full transition-colors ${
+              sidebarOpen ? 'bg-white text-stone-900' : 'text-stone-300 hover:bg-white/10 hover:text-white'
             }`}
           >
-            {sidebarOpen ? <PanelRightClose size={17} strokeWidth={2} /> : <PanelRightOpen size={17} strokeWidth={2} />}
+            {sidebarOpen ? <PanelRightClose size={15} strokeWidth={2} /> : <PanelRightOpen size={15} strokeWidth={2} />}
           </button>
         </div>
       </div>
