@@ -222,22 +222,26 @@ export default function FocusProjectView({
         )}
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-2xl bg-white/70 ring-1 ring-black/5">
+      {/* A grid of vertical cards, not one long column of thin horizontal
+          rows — a single-column list only ever showed one version at a
+          time per screenful; a project with a dozen versions meant a lot
+          of scrolling just to see what exists. Cards let several versions
+          be visible at once, at any width. */}
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {project.versions.length === 0 && (
-          <div className="px-5 py-8 text-center text-[13px] text-stone-400">No versions yet</div>
+          <div className="col-span-full rounded-2xl bg-white/70 px-5 py-8 text-center text-[13px] text-stone-400 ring-1 ring-black/5">
+            No versions yet
+          </div>
         )}
-        {project.versions.map((v, i) =>
+        {project.versions.map((v) =>
           confirmingDelete === v.id ? (
-            <div
-              key={v.id}
-              className={`flex items-center justify-between bg-red-50 px-5 py-4 ${i > 0 ? 'border-t border-black/5' : ''}`}
-            >
-              <span className="text-[13px] font-medium text-red-700">
+            <div key={v.id} className="rounded-2xl bg-red-50 p-4 ring-1 ring-red-100">
+              <div className="text-[13px] font-medium text-red-700">
                 {project.versions.length === 1
                   ? `Delete ${v.label}? The whole project goes with it.`
                   : `Delete ${v.label}? This can't be undone.`}
-              </span>
-              <div className="flex items-center gap-3">
+              </div>
+              <div className="mt-2 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -260,42 +264,38 @@ export default function FocusProjectView({
           ) : (
             <div
               key={v.id}
-              className={`group flex items-center transition-colors hover:bg-black/[0.03] ${
-                i > 0 ? 'border-t border-black/5' : ''
-              }`}
+              className="group relative rounded-2xl bg-white/70 ring-1 ring-black/5 transition-colors hover:bg-white"
             >
-              <button
-                type="button"
-                onClick={() => onOpenVersion(v.id)}
-                className="flex flex-1 items-center justify-between px-5 py-4 text-left"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="inline-block h-2 w-2 rounded-full"
-                    style={{ backgroundColor: v.status === 'blocked' ? '#C2410C' : project.color }}
-                  />
-                  <span className="text-[14px] font-medium text-stone-800">{v.label}</span>
-                  <span className="text-[12px] text-stone-400">
-                    {v.owner} · {v.createdAt}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-[12.5px] text-stone-500">
-                  {VERSION_STATUS_LABEL[v.status] ?? v.status}
-                  {v.comments.length > 0 && <span className="text-stone-400">{v.comments.length} comments</span>}
-                  <ChevronRight size={15} strokeWidth={2} className="text-stone-300" />
-                </div>
-              </button>
               {onDeleteVersion && (
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(v.id)}
                   title="Delete version"
                   aria-label={`Delete ${v.label}`}
-                  className="mr-3 flex h-8 w-8 flex-none items-center justify-center rounded-lg text-stone-300 opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+                  className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 flex-none items-center justify-center rounded-lg text-stone-300 opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
                 >
-                  <Trash2 size={14} strokeWidth={2} />
+                  <Trash2 size={13} strokeWidth={2} />
                 </button>
               )}
+              <button type="button" onClick={() => onOpenVersion(v.id)} className="flex w-full flex-col p-4 text-left">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2 w-2 flex-none rounded-full"
+                    style={{ backgroundColor: v.status === 'blocked' ? '#C2410C' : project.color }}
+                  />
+                  <span className="truncate text-[14px] font-medium text-stone-800">{v.label}</span>
+                </div>
+                <div className="mt-1 text-[12px] text-stone-400">
+                  {v.owner} · {v.createdAt}
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-black/5 pt-2.5 text-[12.5px] text-stone-500">
+                  <span>{VERSION_STATUS_LABEL[v.status] ?? v.status}</span>
+                  <span className="flex items-center gap-1">
+                    {v.comments.length > 0 && <span className="text-stone-400">{v.comments.length} comments</span>}
+                    <ChevronRight size={15} strokeWidth={2} className="text-stone-300" />
+                  </span>
+                </div>
+              </button>
             </div>
           )
         )}
