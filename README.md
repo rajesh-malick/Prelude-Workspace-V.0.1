@@ -1,6 +1,6 @@
-# 🌳 Prelude
+# 🌳 Prelude Workspace
 
-**Prelude** is Zuper's internal design-review tool — a 3D "living workspace" where every project in review is a tree, every version is a bloom, and every comment is a butterfly pinned to the exact spot it's about.
+**Prelude Workspace** is Zuper's internal design-review tool — a 3D "living workspace" where every project in review is a tree, every version is a bloom, and every comment is a butterfly pinned to the exact spot it's about.
 
 If that sentence sounds unusual, don't worry — this README explains exactly what that means, how the app is built, and how to run it yourself, assuming you've never seen the codebase before.
 
