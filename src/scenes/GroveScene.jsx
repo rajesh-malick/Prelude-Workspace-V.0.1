@@ -65,13 +65,12 @@ export default function GroveScene({
           scripted-camera-only (see CameraRig), no free orbiting into geometry */}
       {allowOrbit && (
         <OrbitControls
-          target={[0, 1.2, 0]}
+          target={[0, 0.6, 0]}
           enablePan={false}
           minDistance={7}
           maxDistance={14}
           maxPolarAngle={Math.PI / 2.05}
-          autoRotate={!reducedMotion}
-          autoRotateSpeed={0.35}
+          autoRotate={false}
         />
       )}
     </>

@@ -6,8 +6,8 @@ import gsap from 'gsap';
 // The Grove's resting camera framing — must match the initial camera prop
 // on <Canvas> and the OrbitControls `target` in GroveScene, so control can
 // hand off to/from the scripted tween with no visible snap.
-export const OVERVIEW_POS = { x: 0, y: 4.2, z: 10 };
-export const OVERVIEW_LOOKAT = { x: 0, y: 1.2, z: 0 };
+export const OVERVIEW_POS = { x: 0, y: 7.4, z: 9.5 };
+export const OVERVIEW_LOOKAT = { x: 0, y: 0.6, z: 0 };
 
 // No page transitions — every navigation (Grove <-> Project <-> Review) is
 // entirely camera movement, scripted with GSAP.
