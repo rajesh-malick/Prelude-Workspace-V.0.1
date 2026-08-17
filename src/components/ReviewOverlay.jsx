@@ -11,7 +11,6 @@ import {
   PanelRightOpen,
   PanelRightClose,
   ExternalLink,
-  MessageSquarePlus,
   MapPin,
 } from 'lucide-react';
 import Butterfly from './Butterfly';
@@ -99,11 +98,11 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
             e.stopPropagation();
             onChange(false);
           }}
-          className={`relative z-10 flex flex-1 items-center justify-center gap-1 rounded-md py-1 transition-colors ${
+          className={`relative z-10 flex-1 rounded-md py-1 text-center transition-colors ${
             interactive ? 'text-stone-400 hover:text-stone-200' : 'text-stone-900'
           }`}
         >
-          <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment
+          Comment
         </button>
       </div>
       {/* First-time-ever nudge so people discover there's a second mode at
