@@ -369,6 +369,17 @@ export default function App() {
       ? focusedProject.versions.find((v) => v.id === destination.versionId) ?? null
       : null;
 
+  // Review is a full-screen, fully opaque overlay — the Grove canvas
+  // underneath it is completely invisible the whole time it's open, but
+  // was left rendering anyway, burning GPU for nothing and holding a
+  // WebGL context that can collide with whatever an embedded website's
+  // own page does with WebGL (a live site losing its own context can
+  // take the Grove's down with it under the browser's shared per-tab
+  // context limit). Pausing the frame loop while fully arrived at a
+  // bloom removes that contention without touching camera/navigation
+  // logic — it resumes the instant the return flight starts.
+  const groveHidden = arrived && destination?.kind === 'bloom';
+
   const focus = useMemo(() => {
     if (!destination) return null;
     const project = displayedProjects.find((p) => p.id === destination.projectId);
@@ -898,6 +909,7 @@ export default function App() {
               shadows
               camera={{ position: [OVERVIEW_POS.x, OVERVIEW_POS.y, OVERVIEW_POS.z], fov: 42 }}
               gl={{ alpha: true, antialias: true }}
+              frameloop={groveHidden ? 'never' : 'always'}
             >
               <GroveScene
                 projects={displayedProjects}
