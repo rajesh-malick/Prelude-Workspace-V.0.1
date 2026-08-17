@@ -58,24 +58,28 @@ function positionFor(comment, i) {
 function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
   return (
     <div className="relative">
-      <div className="relative flex items-center gap-0.5 rounded-full bg-white/10 p-1 text-[11px] font-medium backdrop-blur-md">
+      {/* Plain CSS transform for the sliding thumb, deliberately not a
+          Framer Motion layoutId/shared-layout animation — that pattern can
+          leave a lingering full-screen "projection" element behind if the
+          component unmounts mid-animation, which is exactly what toggling
+          this and then immediately navigating away does. A single
+          always-mounted thumb inside this one component can't leak
+          anywhere else. */}
+      <div className="relative flex w-[168px] items-center rounded-full bg-white/10 p-1 text-[11px] font-medium backdrop-blur-md">
+        <span
+          className="absolute inset-y-1 left-1 w-[76px] rounded-full bg-white transition-transform duration-200 ease-out"
+          style={{ transform: interactive ? 'translateX(0%)' : 'translateX(100%)' }}
+        />
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onChange(true);
           }}
-          className={`relative z-10 rounded-full px-2.5 py-1 transition-colors ${
+          className={`relative z-10 flex-1 rounded-full py-1 text-center transition-colors ${
             interactive ? 'text-stone-900' : 'text-stone-300 hover:text-white'
           }`}
         >
-          {interactive && (
-            <motion.span
-              layoutId="mode-switch-thumb"
-              className="absolute inset-0 -z-10 rounded-full bg-white"
-              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-            />
-          )}
           Cursor
         </button>
         <button
@@ -84,17 +88,10 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
             e.stopPropagation();
             onChange(false);
           }}
-          className={`relative z-10 flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors ${
+          className={`relative z-10 flex flex-1 items-center justify-center gap-1 rounded-full py-1 transition-colors ${
             interactive ? 'text-stone-300 hover:text-white' : 'text-stone-900'
           }`}
         >
-          {!interactive && (
-            <motion.span
-              layoutId="mode-switch-thumb"
-              className="absolute inset-0 -z-10 rounded-full bg-white"
-              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-            />
-          )}
           <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment
         </button>
       </div>
