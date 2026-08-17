@@ -354,89 +354,85 @@ export default function ReviewOverlay({
         )}
       </div>
 
-      {/* Floating header — deliberately minimal: back + mode toggle + sidebar
-          toggle, nothing else. Version name/status used to live here too as
-          a centered title and a status row, but that's already shown in the
-          "Version details" panel one click away, and duplicating it here
-          just made the bar taller and easier to lose against busy content.
-          Still a fixed dark, mostly-opaque bar (not the light "glass-surface"
-          used elsewhere) since this overlays an arbitrary uploaded image/
-          video/webpage that can be light-colored just as easily as dark. */}
-      <div className="pointer-events-auto absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-2 rounded-xl bg-stone-900/85 px-3 py-1.5 text-white backdrop-blur-md">
+      {/* No header bar at all anymore — just two independent floating
+          controls, each with its own dark high-contrast pill (not one
+          shared bar) since this overlays arbitrary uploaded content that
+          can be light-colored just as easily as dark. Everything else
+          (version name, status) already lives in the version details
+          panel one click away via the sidebar toggle. */}
+      <button
+        type="button"
+        onClick={onBack}
+        title={`Back to ${project.name}`}
+        aria-label={`Back to ${project.name}`}
+        className="pointer-events-auto absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900/85 text-white backdrop-blur-md transition-colors hover:bg-stone-900"
+      >
+        <ArrowLeft size={16} strokeWidth={2.25} />
+      </button>
+
+      <div className="pointer-events-auto absolute right-3 top-3 z-20 flex items-center gap-1.5">
+        {/* The click-anywhere-to-comment / interact-with-the-asset toggle
+            — moved up here from the bottom of the canvas so switching
+            modes doesn't mean a trip across the whole screen every time. */}
+        {!readOnly && (assetKind === 'video' || assetKind === 'html') && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAssetInteractive((v) => !v);
+                onDismissModeHint?.();
+              }}
+              className={`flex items-center gap-1 rounded-full px-3 py-2 text-[11px] font-medium backdrop-blur-md transition-colors ${
+                assetInteractive ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
+              }`}
+            >
+              {assetInteractive ? (
+                <>
+                  <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
+                </>
+              ) : (
+                'Cursor mode'
+              )}
+            </button>
+            {/* First-time-ever nudge so people discover there's a second
+                mode at all, instead of only ever seeing "Cursor mode" and
+                never finding out what it toggles to. Shown once per
+                account (see App.jsx), dismissed by clicking it away or by
+                actually using the toggle above. */}
+            {showModeHint && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 rounded-lg bg-white p-2.5 text-stone-800 shadow-lg"
+              >
+                <span className="absolute -top-1.5 right-4 block h-3 w-3 rotate-45 bg-white" />
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[12px] leading-snug">Switch here to scroll, play, or click the actual page or video.</p>
+                  <button
+                    type="button"
+                    onClick={() => onDismissModeHint?.()}
+                    aria-label="Dismiss tip"
+                    className="flex-none text-stone-400 transition-colors hover:text-stone-600"
+                  >
+                    <X size={13} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <button
           type="button"
-          onClick={onBack}
-          className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
+          onClick={() => setSidebarOpen((v) => !v)}
+          title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+          aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+          aria-pressed={sidebarOpen}
+          className={`flex h-9 w-9 flex-none items-center justify-center rounded-full backdrop-blur-md transition-colors ${
+            sidebarOpen ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
+          }`}
         >
-          <ArrowLeft size={13} strokeWidth={2} className="flex-none" />
-          <span className="truncate">{project.name}</span>
-          <span className="flex-none text-stone-600">/</span>
-          <span className="truncate font-semibold text-white">{version.label}</span>
+          {sidebarOpen ? <PanelRightClose size={16} strokeWidth={2.25} /> : <PanelRightOpen size={16} strokeWidth={2.25} />}
         </button>
-        <div className="flex flex-none items-center gap-1.5">
-          {/* The click-anywhere-to-comment / interact-with-the-asset toggle
-              — moved up here from the bottom of the canvas so switching
-              modes doesn't mean a trip across the whole screen every time. */}
-          {!readOnly && (assetKind === 'video' || assetKind === 'html') && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAssetInteractive((v) => !v);
-                  onDismissModeHint?.();
-                }}
-                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                  assetInteractive ? 'bg-white text-stone-900' : 'bg-white/10 text-stone-200 hover:bg-white/20'
-                }`}
-              >
-                {assetInteractive ? (
-                  <>
-                    <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
-                  </>
-                ) : (
-                  'Cursor mode'
-                )}
-              </button>
-              {/* First-time-ever nudge so people discover there's a second
-                  mode at all, instead of only ever seeing "Cursor mode" and
-                  never finding out what it toggles to. Shown once per
-                  account (see App.jsx), dismissed by clicking it away or by
-                  actually using the toggle above. */}
-              {showModeHint && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 rounded-lg bg-white p-2.5 text-stone-800 shadow-lg"
-                >
-                  <span className="absolute -top-1.5 right-4 block h-3 w-3 rotate-45 bg-white" />
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[12px] leading-snug">Switch here to scroll, play, or click the actual page or video.</p>
-                    <button
-                      type="button"
-                      onClick={() => onDismissModeHint?.()}
-                      aria-label="Dismiss tip"
-                      className="flex-none text-stone-400 transition-colors hover:text-stone-600"
-                    >
-                      <X size={13} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((v) => !v)}
-            title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
-            aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
-            aria-pressed={sidebarOpen}
-            className={`flex h-7 w-7 flex-none items-center justify-center rounded-full transition-colors ${
-              sidebarOpen ? 'bg-white text-stone-900' : 'text-stone-300 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {sidebarOpen ? <PanelRightClose size={15} strokeWidth={2} /> : <PanelRightOpen size={15} strokeWidth={2} />}
-          </button>
-        </div>
       </div>
 
       {/* Version details + full comment list — off by default so the

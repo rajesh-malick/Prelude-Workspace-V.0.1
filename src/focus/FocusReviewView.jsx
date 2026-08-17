@@ -152,40 +152,33 @@ export default function FocusReviewView({
         )}
       </div>
 
-      {/* Deliberately minimal — back + sidebar toggle, nothing else. Version
-          name/status used to sit here too as a centered title and status
-          row, but that's already one tap away in the Details tab, and
-          duplicating it here just made the bar taller for no reason. Still
-          a fixed dark, mostly-opaque bar (not the light glass-surface used
-          elsewhere) since this overlays arbitrary uploaded content that can
-          be light-colored just as easily as dark (see Grove's ReviewOverlay
-          for the same fix). */}
-      <div className="pointer-events-auto absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-2 rounded-xl bg-stone-900/85 px-3 py-1.5 text-white backdrop-blur-md">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
-        >
-          <ArrowLeft size={13} strokeWidth={2} className="flex-none" />
-          <span className="truncate">{project.name}</span>
-          <span className="flex-none text-stone-600">/</span>
-          <span className="truncate font-semibold text-white">{version.label}</span>
-        </button>
-        <div className="flex flex-none items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen((v) => !v)}
-            title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
-            aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
-            aria-pressed={sidebarOpen}
-            className={`flex h-7 w-7 flex-none items-center justify-center rounded-full transition-colors ${
-              sidebarOpen ? 'bg-white text-stone-900' : 'text-stone-300 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {sidebarOpen ? <PanelRightClose size={15} strokeWidth={2} /> : <PanelRightOpen size={15} strokeWidth={2} />}
-          </button>
-        </div>
-      </div>
+      {/* No header bar — just two independent floating controls, each with
+          its own dark high-contrast pill (not one shared bar) since this
+          overlays arbitrary uploaded content that can be light-colored
+          just as easily as dark. Version name/status live in the Details
+          tab, one tap away via the sidebar toggle. */}
+      <button
+        type="button"
+        onClick={onBack}
+        title={`Back to ${project.name}`}
+        aria-label={`Back to ${project.name}`}
+        className="pointer-events-auto absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900/85 text-white backdrop-blur-md transition-colors hover:bg-stone-900"
+      >
+        <ArrowLeft size={16} strokeWidth={2.25} />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((v) => !v)}
+        title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+        aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+        aria-pressed={sidebarOpen}
+        className={`pointer-events-auto absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-md transition-colors ${
+          sidebarOpen ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
+        }`}
+      >
+        {sidebarOpen ? <PanelRightClose size={16} strokeWidth={2.25} /> : <PanelRightOpen size={16} strokeWidth={2.25} />}
+      </button>
 
       <AnimatePresence>
         {sidebarOpen && (
