@@ -14,9 +14,10 @@ import {
   MapPin,
 } from 'lucide-react';
 import Butterfly from './Butterfly';
-import StatusDropdown from './StatusDropdown';
-import AssigneePicker from './AssigneePicker';
-import { getStatus } from '../utils/commentStatus';
+import ResolveToggle from './ResolveToggle';
+import ReplyThread from './ReplyThread';
+import DetailsCommentsSwitch from './DetailsCommentsSwitch';
+import { resolvedNote } from '../utils/commentStatus';
 
 const STATUS_LABEL = {
   approved: 'Approved',
@@ -141,9 +142,8 @@ export default function ReviewOverlay({
   version,
   onBack,
   onAddComment,
-  onCycleCommentStatus,
-  onAssignComment,
-  people,
+  onResolveComment,
+  onAddReply,
   readOnly,
   visitingOwnerName,
   initialFocusCommentId,
@@ -154,6 +154,7 @@ export default function ReviewOverlay({
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('details');
   const [highlightCommentId, setHighlightCommentId] = useState(null);
   // Both a native <video controls> element and a cross-origin iframe (any
   // pasted external link) have the same either/or: either the element
@@ -181,6 +182,7 @@ export default function ReviewOverlay({
   useEffect(() => {
     if (!initialFocusCommentId) return;
     setSidebarOpen(true);
+    setSidebarTab('comments');
     setHighlightCommentId(initialFocusCommentId);
     const scrollTimer = setTimeout(() => {
       document.getElementById(`comment-${initialFocusCommentId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -350,9 +352,9 @@ export default function ReviewOverlay({
             key={c.id}
             comment={c}
             style={positionFor(c, i)}
-            onCycleStatus={readOnly ? undefined : (newStatus) => onCycleCommentStatus?.(c.id, newStatus)}
-            onAssign={readOnly ? undefined : (name) => onAssignComment?.(c.id, name)}
-            people={people}
+            onResolve={readOnly ? undefined : (resolved) => onResolveComment?.(c.id, resolved)}
+            onAddReply={readOnly ? undefined : (text) => onAddReply?.(c.id, text)}
+            readOnly={readOnly}
           />
         ))}
 
@@ -543,16 +545,32 @@ export default function ReviewOverlay({
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="glass-surface absolute bottom-24 right-4 top-20 z-20 flex w-[300px] flex-col overflow-hidden rounded-2xl"
           >
+            {/* Moved down from the header when it went minimal — still a
+                persistent reminder you're editing someone else's territory.
+                Sits above the switch, not inside either tab, since it's
+                relevant no matter which one you're looking at. */}
+            {visitingOwnerName && (
+              <div className="mx-3 mt-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[12.5px] font-medium text-amber-700">
+                <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+              </div>
+            )}
+
+            {/* Same sliding-switch pattern as Cursor/Comment mode — Details
+                and Comments used to be stacked in one long scroll, which
+                meant scrolling past all the version metadata just to reach
+                the comments (or vice versa). Splitting them into two
+                explicit views made either one reachable in one click. */}
+            <div className="flex-none p-3 pb-0">
+              <DetailsCommentsSwitch
+                tab={sidebarTab}
+                onChange={setSidebarTab}
+                commentsLabel={`Comments · ${version.comments.length}`}
+              />
+            </div>
+
+            {sidebarTab === 'details' ? (
             <div className="flex-1 overflow-y-auto p-4">
-              {/* Moved down from the header when it went minimal — still a
-                  persistent reminder you're editing someone else's territory. */}
-              {visitingOwnerName && (
-                <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[12.5px] font-medium text-amber-700">
-                  <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
-                </div>
-              )}
-              <div className="text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">Version details</div>
-              <div className="mt-2 space-y-2 text-[13.5px]">
+              <div className="space-y-2 text-[13.5px]">
                 <div className="flex justify-between gap-2">
                   <span className="text-stone-500">Version name</span>
                   <span className="font-medium text-stone-800">{version.label}</span>
@@ -598,63 +616,54 @@ export default function ReviewOverlay({
                   <p className="mt-1 text-[13px] leading-snug text-stone-600">{version.changelog}</p>
                 </div>
               )}
-
-              <div className="mt-4 border-t border-black/5 pt-3 text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">
-                Comments · {version.comments.length}
-              </div>
-              <div className="mt-2 space-y-2">
-                {version.comments.length === 0 && (
-                  <div className="text-[13px] text-stone-500">No comments on this version yet.</div>
-                )}
-                {version.comments.map((c) => {
-                  const CommentTagIcon = c.tag ? TAG_ICON[c.tag] : null;
-                  return (
-                    <div
-                      key={c.id}
-                      id={`comment-${c.id}`}
-                      className="rounded-lg bg-black/[0.03] p-2.5 transition-shadow"
-                      style={c.id === highlightCommentId ? { boxShadow: `0 0 0 2px ${project.color}` } : undefined}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-stone-800">
-                          {c.author}
-                          {CommentTagIcon && (
-                            <span className="text-stone-500" title={TAG_LABEL[c.tag]}>
-                              <CommentTagIcon size={13} strokeWidth={2.5} />
-                            </span>
-                          )}
-                        </div>
-                        <StatusDropdown
-                          status={getStatus(c)}
-                          onChange={readOnly ? undefined : (s) => onCycleCommentStatus?.(c.id, s)}
-                          size="sm"
-                        />
-                      </div>
-                      <div className="mt-1 text-[13px] leading-snug text-stone-700">{c.text}</div>
-                      <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-black/5 pt-1.5">
-                        <span className="text-[11px] font-medium uppercase tracking-wide text-stone-600">Assigned to</span>
-                        <AssigneePickerOrLabel
-                          assignee={c.assignee}
-                          readOnly={readOnly}
-                          people={people}
-                          onChange={(name) => onAssignComment?.(c.id, name)}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
+            ) : (
+            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              {version.comments.length === 0 && (
+                <div className="text-[13px] text-stone-500">No comments on this version yet.</div>
+              )}
+              {version.comments.map((c) => {
+                const CommentTagIcon = c.tag ? TAG_ICON[c.tag] : null;
+                return (
+                  <div
+                    key={c.id}
+                    id={`comment-${c.id}`}
+                    className="rounded-lg bg-black/[0.03] p-2.5 transition-shadow"
+                    style={c.id === highlightCommentId ? { boxShadow: `0 0 0 2px ${project.color}` } : undefined}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-[13px] font-semibold text-stone-800">
+                        {c.author}
+                        {CommentTagIcon && (
+                          <span className="text-stone-500" title={TAG_LABEL[c.tag]}>
+                            <CommentTagIcon size={13} strokeWidth={2.5} />
+                          </span>
+                        )}
+                      </div>
+                      <ResolveToggle
+                        resolved={Boolean(c.resolved)}
+                        resolvedBy={c.resolvedBy}
+                        onChange={readOnly ? undefined : (v) => onResolveComment?.(c.id, v)}
+                        readOnly={readOnly}
+                      />
+                    </div>
+                    <div className="mt-1 text-[13px] leading-snug text-stone-700">{c.text}</div>
+                    {resolvedNote(c) && <div className="mt-1 text-[11px] font-medium text-stone-500">{resolvedNote(c)}</div>}
+                    <div className="mt-2 border-t border-black/5 pt-2">
+                      <ReplyThread
+                        replies={c.replies}
+                        onAddReply={readOnly ? undefined : (text) => onAddReply?.(c.id, text)}
+                        readOnly={readOnly}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
   );
-}
-
-function AssigneePickerOrLabel({ assignee, readOnly, people, onChange }) {
-  if (readOnly) {
-    return <span className="text-[12px] font-medium text-stone-600">{assignee ?? 'Unassigned'}</span>;
-  }
-  return <AssigneePicker assignee={assignee ?? null} onChange={onChange} people={people} size="sm" />;
 }

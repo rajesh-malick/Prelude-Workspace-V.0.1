@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paintbrush, Star } from 'lucide-react';
-import { getStatus, getStatusNote, STATUS_META } from '../utils/commentStatus';
-import StatusDropdown from './StatusDropdown';
-import AssigneePicker from './AssigneePicker';
+import { isResolved, resolvedNote } from '../utils/commentStatus';
+import ResolveToggle from './ResolveToggle';
+import ReplyThread from './ReplyThread';
 
 // A "butterfly" is the visual treatment for one comment. Unresolved ones
 // flutter gently; resolved ones sit dim and still. Hover to expand.
@@ -13,16 +13,15 @@ const TAG_ICON = { ui: Paintbrush, improvement: Star };
 const TAG_LABEL = { ui: 'UI improvement', improvement: 'Improvement' };
 const TAG_ACCENT = { ui: 'text-sky-600', improvement: 'text-amber-500' };
 
-export default function Butterfly({ comment, style, onCycleStatus, onAssign, people }) {
+export default function Butterfly({ comment, style, onResolve, onAddReply, readOnly }) {
   const [open, setOpen] = useState(false);
   const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
-  const status = getStatus(comment);
-  const resolved = status === 'resolved';
+  const resolved = isResolved(comment);
   const wingColor = resolved ? '#C9BBAA' : '#FF6FB0';
   const wingColorDark = resolved ? '#B8A98F' : '#FF3D8F';
   // A comment pinned in the lower half of the preview would otherwise
-  // expand its card (and the status dropdown inside it) off the bottom
-  // edge — flip both upward instead of guessing a fixed direction.
+  // expand its card off the bottom edge — flip both upward instead of
+  // guessing a fixed direction.
   const dropUp = (comment.y ?? 50) > 55;
 
   return (
@@ -31,13 +30,13 @@ export default function Butterfly({ comment, style, onCycleStatus, onAssign, peo
       style={style}
       tabIndex={0}
       role="button"
-      aria-label={`Comment by ${comment.author}: ${comment.text}. Status: ${STATUS_META[status].label}.`}
+      aria-label={`Comment by ${comment.author}: ${comment.text}. ${resolved ? 'Resolved.' : 'Not resolved.'}`}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
       onBlur={(e) => {
         // Keep it open while focus moves to something inside it (e.g. the
-        // status dropdown's own menu) — only close once focus truly leaves.
+        // reply input) — only close once focus truly leaves.
         if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
       }}
       onClick={(e) => e.stopPropagation()}
@@ -85,35 +84,33 @@ export default function Butterfly({ comment, style, onCycleStatus, onAssign, peo
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="text-[13.5px] font-semibold text-stone-800">{comment.author}</div>
-              {TagIcon && (
-                <div className={`flex items-center gap-1 text-[11.5px] font-medium ${TAG_ACCENT[comment.tag]}`}>
-                  <TagIcon size={11} strokeWidth={2.5} />
-                  {TAG_LABEL[comment.tag]}
-                </div>
-              )}
+              <div className="flex items-center gap-1.5">
+                <div className="text-[13.5px] font-semibold text-stone-800">{comment.author}</div>
+                {TagIcon && (
+                  <div className={`flex items-center gap-1 text-[11.5px] font-medium ${TAG_ACCENT[comment.tag]}`}>
+                    <TagIcon size={11} strokeWidth={2.5} />
+                    {TAG_LABEL[comment.tag]}
+                  </div>
+                )}
+              </div>
+              <ResolveToggle
+                resolved={resolved}
+                resolvedBy={comment.resolvedBy}
+                onChange={readOnly ? undefined : (v) => onResolve?.(v)}
+                readOnly={readOnly}
+              />
             </div>
             <div className="mt-1 text-[14px] leading-snug text-stone-700">{comment.text}</div>
-            {/* Status note on its own full-width line rather than crammed
-                into the same row as the pickers — that squeezed a whole
-                sentence ("Assigned to X by Y") into a sliver of leftover
-                space next to two pills, wrapping it into an unreadable
-                4-line stack. Same layout FocusReviewView's comment rows
-                already use for this. */}
-            {getStatusNote(comment) && (
-              <div className="mt-1.5 text-[11.5px] font-medium text-stone-600">{getStatusNote(comment)}</div>
+            {resolvedNote(comment) && (
+              <div className="mt-1 text-[11px] font-medium text-stone-500">{resolvedNote(comment)}</div>
             )}
-            <div className="mt-1.5 flex items-center justify-end gap-1">
-              {onAssign && (
-                <AssigneePicker
-                  assignee={comment.assignee ?? null}
-                  onChange={(name) => onAssign(name)}
-                  people={people}
-                  size="sm"
-                  dropUp={dropUp}
-                />
-              )}
-              <StatusDropdown status={status} onChange={(s) => onCycleStatus?.(s)} size="sm" dropUp={dropUp} />
+            <div className="mt-2 border-t border-black/5 pt-2">
+              <ReplyThread
+                replies={comment.replies}
+                onAddReply={readOnly ? undefined : (text) => onAddReply?.(text)}
+                readOnly={readOnly}
+                compact
+              />
             </div>
           </motion.div>
         )}

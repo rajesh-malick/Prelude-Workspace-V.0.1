@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore, MapPin } from 'lucide-react';
-import { getStatus } from '../utils/commentStatus';
+import { isResolved } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
 const STATUS_LABEL = {
@@ -45,7 +45,7 @@ export default function FocusProjectView({
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
-  const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
+  const resolvedCount = allComments.filter((c) => isResolved(c)).length;
 
   return (
     <motion.div

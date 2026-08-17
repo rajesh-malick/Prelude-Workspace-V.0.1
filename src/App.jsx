@@ -356,13 +356,6 @@ export default function App() {
     [isVisitingOther]
   );
 
-  // Everyone assignable on a comment — anyone at the company can be, since
-  // anyone can view and edit any territory.
-  const assignablePeople = useMemo(() => {
-    const names = [userName, ...territories.map((t) => t.ownerName)].filter(Boolean);
-    return [...new Set(names)];
-  }, [userName, territories]);
-
   const focusedProject = destination ? displayedProjects.find((p) => p.id === destination.projectId) ?? null : null;
   const focusedVersion =
     destination?.kind === 'bloom' && focusedProject
@@ -616,7 +609,7 @@ export default function App() {
             ...p,
             versions: p.versions.map((v) => {
               if (v.id !== versionId) return v;
-              const comment = { id: genId('c'), author: userName, text, status: 'open' };
+              const comment = { id: genId('c'), author: userName, text, resolved: false, replies: [] };
               if (tag) comment.tag = tag;
               if (x != null) {
                 comment.x = x;
@@ -631,12 +624,41 @@ export default function App() {
     [userName, updateProjects]
   );
 
-  // Cycles a comment through open -> assigned -> reviewed -> resolved.
-  // Every transition records who made it (`statusBy`) so the trail is
-  // visible — "Reviewed by X", "Resolved by X". Who it's assigned TO is a
-  // separate decision — see handleAssignComment below.
-  const handleCycleCommentStatus = useCallback(
-    (projectId, versionId, commentId, newStatus) => {
+  // Resolved is a plain boolean now, not a staged workflow — the old
+  // open/assigned/reviewed states never really got used as a workflow, and
+  // replies (see handleAddReply below) carry whatever nuance those stages
+  // were trying to capture. `resolvedBy` records who last resolved it, for
+  // the same reason `statusBy` used to; it clears on reopen since a stale
+  // "resolved by X" would be misleading once it's open again.
+  const handleResolveComment = useCallback(
+    (projectId, versionId, commentId, resolved) => {
+      updateProjects((prev) =>
+        prev.map((p) => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            versions: p.versions.map((v) => {
+              if (v.id !== versionId) return v;
+              return {
+                ...v,
+                comments: v.comments.map((c) =>
+                  c.id !== commentId ? c : { ...c, resolved, resolvedBy: resolved ? userName : undefined }
+                ),
+              };
+            }),
+          };
+        })
+      );
+    },
+    [userName, updateProjects]
+  );
+
+  // Replies replace the old formal "assignee" field — "@Aravindan can you
+  // take this" as a reply does the same delegation job without a separate,
+  // redundant control, and doubles as the actual back-and-forth a bare
+  // assignee name never captured.
+  const handleAddReply = useCallback(
+    (projectId, versionId, commentId, text) => {
       updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
@@ -649,46 +671,8 @@ export default function App() {
                 comments: v.comments.map((c) =>
                   c.id !== commentId
                     ? c
-                    : { ...c, status: newStatus, resolved: newStatus === 'resolved', statusBy: userName }
+                    : { ...c, replies: [...(c.replies ?? []), { id: genId('r'), author: userName, text }] }
                 ),
-              };
-            }),
-          };
-        })
-      );
-    },
-    [userName, updateProjects]
-  );
-
-  // Assigning a COMMENT to a teammate (not a whole version — a version is
-  // owned by whoever created it, but any individual piece of feedback on
-  // it can be handed to someone specific to act on). Picking a real name
-  // also nudges the comment to "assigned" if it was still sitting "open";
-  // picking "Unassigned" clears it without touching status otherwise.
-  const handleAssignComment = useCallback(
-    (projectId, versionId, commentId, assigneeName) => {
-      updateProjects((prev) =>
-        prev.map((p) => {
-          if (p.id !== projectId) return p;
-          return {
-            ...p,
-            versions: p.versions.map((v) => {
-              if (v.id !== versionId) return v;
-              return {
-                ...v,
-                comments: v.comments.map((c) => {
-                  if (c.id !== commentId) return c;
-                  if (!assigneeName) {
-                    const { assignee, assignedBy, ...rest } = c;
-                    return rest;
-                  }
-                  return {
-                    ...c,
-                    assignee: assigneeName,
-                    assignedBy: userName,
-                    status: c.status === 'open' || !c.status ? 'assigned' : c.status,
-                  };
-                }),
               };
             }),
           };
@@ -970,13 +954,10 @@ export default function App() {
                 version={focusedVersion}
                 onBack={handleBackToProject}
                 onAddComment={(payload) => handleAddComment(focusedProject.id, focusedVersion.id, payload)}
-                onCycleCommentStatus={(commentId, newStatus) =>
-                  handleCycleCommentStatus(focusedProject.id, focusedVersion.id, commentId, newStatus)
+                onResolveComment={(commentId, resolved) =>
+                  handleResolveComment(focusedProject.id, focusedVersion.id, commentId, resolved)
                 }
-                onAssignComment={(commentId, assigneeName) =>
-                  handleAssignComment(focusedProject.id, focusedVersion.id, commentId, assigneeName)
-                }
-                people={assignablePeople}
+                onAddReply={(commentId, text) => handleAddReply(focusedProject.id, focusedVersion.id, commentId, text)}
                 readOnly={false}
                 visitingOwnerName={visitingOwnerName}
                 initialFocusCommentId={destination.focusCommentId}
@@ -1040,13 +1021,10 @@ export default function App() {
                 version={focusedVersion}
                 onBack={handleFocusBackToProject}
                 onAddComment={(payload) => handleAddComment(focusedProject.id, focusedVersion.id, payload)}
-                onCycleCommentStatus={(commentId, newStatus) =>
-                  handleCycleCommentStatus(focusedProject.id, focusedVersion.id, commentId, newStatus)
+                onResolveComment={(commentId, resolved) =>
+                  handleResolveComment(focusedProject.id, focusedVersion.id, commentId, resolved)
                 }
-                onAssignComment={(commentId, assigneeName) =>
-                  handleAssignComment(focusedProject.id, focusedVersion.id, commentId, assigneeName)
-                }
-                people={assignablePeople}
+                onAddReply={(commentId, text) => handleAddReply(focusedProject.id, focusedVersion.id, commentId, text)}
                 readOnly={false}
                 visitingOwnerName={visitingOwnerName}
               />

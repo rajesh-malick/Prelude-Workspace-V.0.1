@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Paintbrush, Star } from 'lucide-react';
-import { getStatus, STATUS_META } from '../utils/commentStatus';
+import { isResolved } from '../utils/commentStatus';
 
 const TAG_ICON = { ui: Paintbrush, improvement: Star };
 
@@ -43,9 +43,7 @@ export default function HoverPanel({ project }) {
           <div className="flex items-center gap-1 text-[12px] font-medium text-stone-500">
             {TagIcon && <TagIcon size={10} strokeWidth={2.5} />}
             {latest.comment.author} · {latest.version.label}
-            <span style={{ color: STATUS_META[getStatus(latest.comment)].color }}>
-              · {STATUS_META[getStatus(latest.comment)].label.toLowerCase()}
-            </span>
+            {isResolved(latest.comment) && <span className="text-emerald-600"> · resolved</span>}
           </div>
           <div className="mt-0.5 text-[13px] leading-snug text-stone-700">{truncate(latest.comment.text)}</div>
         </div>

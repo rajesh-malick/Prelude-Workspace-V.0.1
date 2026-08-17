@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowUpRight, Check, Plus, Trash2, MapPin } from 'lucide-react';
-import { getStatus } from '../utils/commentStatus';
+import { isResolved } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
 // All copy here uses real product terms (Project/Versions/Status) per the
@@ -40,8 +40,9 @@ function getTeamInitials(project) {
 // status/assignee controls here, just enough to recognize the comment and
 // click through to it).
 function CommentPreviewRow({ comment, onClick }) {
-  const resolved = getStatus(comment) === 'resolved';
+  const resolved = isResolved(comment);
   const author = comment.author || 'Unknown';
+  const replyCount = comment.replies?.length ?? 0;
   return (
     <button
       type="button"
@@ -60,6 +61,13 @@ function CommentPreviewRow({ comment, onClick }) {
           {resolved && <Check size={11} strokeWidth={3} className="flex-none text-emerald-600" />}
         </div>
         <div className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-stone-600">{comment.text}</div>
+        {/* Full thread only shows once you open Review — this is just
+            enough to know there's a conversation happening. */}
+        {replyCount > 0 && (
+          <div className="mt-0.5 text-[11.5px] font-medium text-stone-400">
+            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+          </div>
+        )}
       </div>
     </button>
   );
@@ -79,7 +87,7 @@ export default function ProjectOverlay({
   const [confirmingDeleteProject, setConfirmingDeleteProject] = useState(false);
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
-  const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
+  const resolvedCount = allComments.filter((c) => isResolved(c)).length;
   const latestVersion = project.versions.length > 0 ? project.versions[project.versions.length - 1] : null;
 
   return (

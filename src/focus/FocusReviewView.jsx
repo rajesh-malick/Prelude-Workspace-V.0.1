@@ -12,9 +12,10 @@ import {
   ExternalLink,
   MapPin,
 } from 'lucide-react';
-import { getStatus, getStatusNote } from '../utils/commentStatus';
-import StatusDropdown from '../components/StatusDropdown';
-import AssigneePicker from '../components/AssigneePicker';
+import { resolvedNote } from '../utils/commentStatus';
+import ResolveToggle from '../components/ResolveToggle';
+import ReplyThread from '../components/ReplyThread';
+import DetailsCommentsSwitch from '../components/DetailsCommentsSwitch';
 
 const STATUS_LABEL = {
   approved: 'Approved',
@@ -32,8 +33,7 @@ const TAG_OPTIONS = [
 ];
 const TAG_ICON = { ui: Paintbrush, improvement: Star };
 
-function CommentRow({ comment, onCycleStatus, onAssign, people, dropUp }) {
-  const status = getStatus(comment);
+function CommentRow({ comment, onResolve, onAddReply, readOnly }) {
   const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
 
   return (
@@ -47,17 +47,17 @@ function CommentRow({ comment, onCycleStatus, onAssign, people, dropUp }) {
             </span>
           )}
         </div>
-        <StatusDropdown status={status} onChange={(s) => onCycleStatus?.(comment.id, s)} size="sm" dropUp={dropUp} />
+        <ResolveToggle
+          resolved={Boolean(comment.resolved)}
+          resolvedBy={comment.resolvedBy}
+          onChange={readOnly ? undefined : onResolve}
+          readOnly={readOnly}
+        />
       </div>
       <div className="mt-1 text-[13px] leading-snug text-stone-700">{comment.text}</div>
-      {getStatusNote(comment) && <div className="mt-1 text-[11px] font-medium text-stone-600">{getStatusNote(comment)}</div>}
-      <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-black/5 pt-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-stone-600">Assigned to</span>
-        {onAssign ? (
-          <AssigneePicker assignee={comment.assignee ?? null} onChange={onAssign} people={people} size="sm" dropUp={dropUp} />
-        ) : (
-          <span className="text-[12px] font-medium text-stone-600">{comment.assignee ?? 'Unassigned'}</span>
-        )}
+      {resolvedNote(comment) && <div className="mt-1 text-[11px] font-medium text-stone-500">{resolvedNote(comment)}</div>}
+      <div className="mt-2 border-t border-black/5 pt-2">
+        <ReplyThread replies={comment.replies} onAddReply={readOnly ? undefined : onAddReply} readOnly={readOnly} />
       </div>
     </div>
   );
@@ -71,9 +71,8 @@ export default function FocusReviewView({
   version,
   onBack,
   onAddComment,
-  onCycleCommentStatus,
-  onAssignComment,
-  people,
+  onResolveComment,
+  onAddReply,
   readOnly,
   visitingOwnerName,
 }) {
@@ -225,27 +224,15 @@ export default function FocusReviewView({
             // less left the dock overlapping the input on shorter viewports.
             className="glass-surface absolute bottom-24 right-4 top-20 z-20 flex w-[320px] flex-col overflow-hidden rounded-2xl"
           >
-            {/* Toggle between the two things that used to compete for space
-                on the page — only one is ever on screen at a time. */}
-            <div className="flex items-center gap-1 border-b border-black/5 p-2">
-              <button
-                type="button"
-                onClick={() => setSidebarTab('details')}
-                className={`flex-1 rounded-lg py-1.5 text-[13px] font-medium transition-colors ${
-                  sidebarTab === 'details' ? 'bg-stone-800 text-white' : 'text-stone-600 hover:bg-black/5'
-                }`}
-              >
-                Details
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidebarTab('comments')}
-                className={`flex-1 rounded-lg py-1.5 text-[13px] font-medium transition-colors ${
-                  sidebarTab === 'comments' ? 'bg-stone-800 text-white' : 'text-stone-600 hover:bg-black/5'
-                }`}
-              >
-                Comments · {version.comments.length}
-              </button>
+            {/* Same sliding-switch pattern as Cursor/Comment mode and
+                Grove's ReviewOverlay — one visual language for "pick one of
+                two views" everywhere it shows up. */}
+            <div className="border-b border-black/5 p-2">
+              <DetailsCommentsSwitch
+                tab={sidebarTab}
+                onChange={setSidebarTab}
+                commentsLabel={`Comments · ${version.comments.length}`}
+              />
             </div>
 
             {sidebarTab === 'details' ? (
@@ -308,14 +295,13 @@ export default function FocusReviewView({
                   {version.comments.length === 0 && (
                     <div className="text-[13px] text-stone-500">No comments on this version yet.</div>
                   )}
-                  {version.comments.map((c, i) => (
+                  {version.comments.map((c) => (
                     <CommentRow
                       key={c.id}
                       comment={c}
-                      onCycleStatus={readOnly ? undefined : onCycleCommentStatus}
-                      onAssign={readOnly ? undefined : (name) => onAssignComment?.(c.id, name)}
-                      people={people}
-                      dropUp={i === version.comments.length - 1 && version.comments.length > 1}
+                      onResolve={readOnly ? undefined : (resolved) => onResolveComment?.(c.id, resolved)}
+                      onAddReply={readOnly ? undefined : (text) => onAddReply?.(c.id, text)}
+                      readOnly={readOnly}
                     />
                   ))}
                 </div>

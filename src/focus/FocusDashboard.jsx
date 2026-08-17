@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { ChevronDown, ArrowUpDown, X } from 'lucide-react';
-import { getStatus } from '../utils/commentStatus';
+import { isResolved } from '../utils/commentStatus';
 import { parseElapsedMinutes } from '../utils/relativeTime';
 import { avatarColor } from '../utils/avatarColor';
 
@@ -53,7 +53,9 @@ function updatedMinutesAgo(project) {
 function isMine(project, userName) {
   if (!userName) return false;
   return project.versions.some(
-    (v) => v.owner === userName || v.comments.some((c) => c.author === userName || c.assignee === userName)
+    (v) =>
+      v.owner === userName ||
+      v.comments.some((c) => c.author === userName || c.replies?.some((r) => r.author === userName))
   );
 }
 
@@ -90,9 +92,9 @@ function applySort(projects, sortKey) {
 
 const MENU_WIDTH = 190;
 
-// Same portal-to-<body> pattern as StatusDropdown/AssigneePicker — this
-// page lives inside Focus mode's own scroll container, and a plain
-// `position: absolute` menu would scroll/clip oddly inside it.
+// Portaled to <body> — this page lives inside Focus mode's own scroll
+// container, and a plain `position: absolute` menu would scroll/clip
+// oddly inside it.
 function SortDropdown({ sortKey, onChange }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
@@ -188,7 +190,7 @@ function getTeamInitials(project) {
 
 function ProjectCard({ project, onOpen }) {
   const allComments = project.versions.flatMap((v) => v.comments);
-  const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
+  const resolvedCount = allComments.filter((c) => isResolved(c)).length;
   const team = getTeamInitials(project);
 
   return (
@@ -322,7 +324,7 @@ export default function FocusDashboard({ projects, userName, onOpenProject, onRe
             {projects.length === 0
               ? 'Create your first project to get started.'
               : filterKey === 'mine'
-                ? "This shows projects where you own a version, or you're the author or assignee on a comment."
+                ? "This shows projects where you own a version, or you've commented or replied on one."
                 : 'Try a different filter above.'}
           </p>
         </div>

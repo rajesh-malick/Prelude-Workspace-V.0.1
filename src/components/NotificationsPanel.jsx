@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Paintbrush, Star, MapPin } from 'lucide-react';
-import { getStatus, STATUS_META } from '../utils/commentStatus';
+import { isResolved } from '../utils/commentStatus';
 import { formatRelativeTime } from '../utils/relativeTime';
 
 const TAG_ICON = { ui: Paintbrush, improvement: Star };
@@ -73,7 +73,7 @@ export default function NotificationsPanel({ projects, territoryNotices = [], no
         )}
         {items.map(({ project, version, comment }) => {
           const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
-          const status = getStatus(comment);
+          const resolved = isResolved(comment);
           return (
             <button
               key={comment.id}
@@ -89,12 +89,11 @@ export default function NotificationsPanel({ projects, territoryNotices = [], no
                   <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
                   {project.name} · {version.label}
                 </div>
-                <span
-                  className="rounded-full px-1.5 py-0.5 text-[11px] font-semibold"
-                  style={{ color: STATUS_META[status].color, backgroundColor: `${STATUS_META[status].color}1a` }}
-                >
-                  {STATUS_META[status].label}
-                </span>
+                {resolved && (
+                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+                    Resolved
+                  </span>
+                )}
               </div>
               <div className="mt-1 flex items-center gap-1 text-[12px] font-medium text-stone-500">
                 {TagIcon && <TagIcon size={10} strokeWidth={2.5} />}
