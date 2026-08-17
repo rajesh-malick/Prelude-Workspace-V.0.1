@@ -69,7 +69,12 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
           sits directly next to the h-8 sidebar-toggle button, and without
           a matching fixed height the two ended up a couple pixels
           different, reading as slightly misaligned next to each other. */}
-      <div className="relative flex h-8 w-[168px] items-center rounded-full bg-white/10 p-1 text-[11px] font-medium backdrop-blur-md">
+      {/* bg-white/10 read as almost no background at all against the
+          near-black stone-950 strip behind it — the track looked like it
+          wasn't fully there, just a stray "Cursor" label floating with no
+          visible pill around it. A solid, clearly lighter gray gives the
+          track an actual visible boundary regardless of what's behind it. */}
+      <div className="relative flex h-8 w-[168px] items-center rounded-full border border-white/10 bg-stone-800 p-1 text-[11px] font-medium">
         <span
           className="absolute inset-y-1 left-1 w-[76px] rounded-full bg-white transition-transform duration-200 ease-out"
           style={{ transform: interactive ? 'translateX(0%)' : 'translateX(100%)' }}
