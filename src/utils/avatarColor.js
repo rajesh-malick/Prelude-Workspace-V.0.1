@@ -13,9 +13,10 @@ const PALETTE = [
 ];
 
 export function avatarColor(name) {
+  const safeName = name || '?';
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < safeName.length; i++) {
+    hash = (hash * 31 + safeName.charCodeAt(i)) >>> 0;
   }
   return PALETTE[hash % PALETTE.length];
 }

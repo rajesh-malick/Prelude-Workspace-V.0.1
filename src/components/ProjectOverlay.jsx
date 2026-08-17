@@ -41,6 +41,7 @@ function getTeamInitials(project) {
 // click through to it).
 function CommentPreviewRow({ comment, onClick }) {
   const resolved = getStatus(comment) === 'resolved';
+  const author = comment.author || 'Unknown';
   return (
     <button
       type="button"
@@ -48,14 +49,14 @@ function CommentPreviewRow({ comment, onClick }) {
       className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-black/5"
     >
       <div
-        style={{ backgroundColor: avatarColor(comment.author).bg, color: avatarColor(comment.author).fg }}
+        style={{ backgroundColor: avatarColor(author).bg, color: avatarColor(author).fg }}
         className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold"
       >
-        {comment.author.charAt(0).toUpperCase()}
+        {author.charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-stone-800">
-          <span className="truncate">{comment.author}</span>
+          <span className="truncate">{author}</span>
           {resolved && <Check size={11} strokeWidth={3} className="flex-none text-emerald-600" />}
         </div>
         <div className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-stone-600">{comment.text}</div>
