@@ -63,13 +63,13 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onChange(false);
+            onChange(true);
           }}
           className={`relative z-10 rounded-full px-2.5 py-1 transition-colors ${
-            interactive ? 'text-stone-300 hover:text-white' : 'text-stone-900'
+            interactive ? 'text-stone-900' : 'text-stone-300 hover:text-white'
           }`}
         >
-          {!interactive && (
+          {interactive && (
             <motion.span
               layoutId="mode-switch-thumb"
               className="absolute inset-0 -z-10 rounded-full bg-white"
@@ -82,13 +82,13 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onChange(true);
+            onChange(false);
           }}
           className={`relative z-10 flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors ${
-            interactive ? 'text-stone-900' : 'text-stone-300 hover:text-white'
+            interactive ? 'text-stone-300 hover:text-white' : 'text-stone-900'
           }`}
         >
-          {interactive && (
+          {!interactive && (
             <motion.span
               layoutId="mode-switch-thumb"
               className="absolute inset-0 -z-10 rounded-full bg-white"
