@@ -152,31 +152,26 @@ export default function FocusReviewView({
         )}
       </div>
 
-      {/* Dark, mostly-opaque bar rather than the light glass-surface used
-          elsewhere — this overlays an arbitrary uploaded image/video/
-          webpage, which can be light-colored just as easily as dark, and
-          a light frosted panel over light content read as nearly
-          invisible. Kept slim so it doesn't cover an embedded page's own
-          header (see Grove's ReviewOverlay for the same fix). */}
+      {/* Deliberately minimal — back + sidebar toggle, nothing else. Version
+          name/status used to sit here too as a centered title and status
+          row, but that's already one tap away in the Details tab, and
+          duplicating it here just made the bar taller for no reason. Still
+          a fixed dark, mostly-opaque bar (not the light glass-surface used
+          elsewhere) since this overlays arbitrary uploaded content that can
+          be light-colored just as easily as dark (see Grove's ReviewOverlay
+          for the same fix). */}
       <div className="pointer-events-auto absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-2 rounded-xl bg-stone-900/85 px-3 py-1.5 text-white backdrop-blur-md">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex min-w-0 flex-none items-center gap-1 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
+          className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
         >
-          <ArrowLeft size={13} strokeWidth={2} /> <span className="truncate">{project.name}</span>
+          <ArrowLeft size={13} strokeWidth={2} className="flex-none" />
+          <span className="truncate">{project.name}</span>
+          <span className="flex-none text-stone-600">/</span>
+          <span className="truncate font-semibold text-white">{version.label}</span>
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-center text-[13.5px] font-semibold text-white">{version.label}</h2>
         <div className="flex flex-none items-center gap-1.5">
-          {visitingOwnerName && (
-            <div className="hidden items-center gap-1 rounded-full bg-amber-400/20 px-2 py-1 text-[11px] font-medium text-amber-200 sm:flex">
-              <MapPin size={11} strokeWidth={2} /> Editing {visitingOwnerName}'s
-            </div>
-          )}
-          <div className="hidden items-center gap-1 text-[11.5px] text-stone-300 sm:flex">
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
-            {STATUS_LABEL[version.status] ?? version.status}
-          </div>
           <button
             type="button"
             onClick={() => setSidebarOpen((v) => !v)}
@@ -230,6 +225,11 @@ export default function FocusReviewView({
 
             {sidebarTab === 'details' ? (
               <div className="flex-1 overflow-y-auto p-4">
+                {visitingOwnerName && (
+                  <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[12.5px] font-medium text-amber-700">
+                    <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+                  </div>
+                )}
                 <div className="space-y-2 text-[13.5px]">
                   <div className="flex justify-between gap-2">
                     <span className="text-stone-500">Version name</span>

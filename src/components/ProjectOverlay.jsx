@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, MapPin } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, Plus, Trash2, MapPin } from 'lucide-react';
 import { getStatus } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
@@ -35,10 +35,40 @@ function getTeamInitials(project) {
   return names;
 }
 
+// Compact preview row for the sidebar's latest-version comment list — a
+// read-only jump-off point, not the full editable row from Review (no
+// status/assignee controls here, just enough to recognize the comment and
+// click through to it).
+function CommentPreviewRow({ comment, onClick }) {
+  const resolved = getStatus(comment) === 'resolved';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-black/5"
+    >
+      <div
+        style={{ backgroundColor: avatarColor(comment.author).bg, color: avatarColor(comment.author).fg }}
+        className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold"
+      >
+        {comment.author.charAt(0).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-stone-800">
+          <span className="truncate">{comment.author}</span>
+          {resolved && <Check size={11} strokeWidth={3} className="flex-none text-emerald-600" />}
+        </div>
+        <div className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-stone-600">{comment.text}</div>
+      </div>
+    </button>
+  );
+}
+
 export default function ProjectOverlay({
   project,
   onBack,
   onOpenVersion,
+  onOpenComment,
   onRequestNewVersion,
   onDeleteVersion,
   onDeleteProject,
@@ -49,6 +79,7 @@ export default function ProjectOverlay({
   const team = getTeamInitials(project);
   const allComments = project.versions.flatMap((v) => v.comments);
   const resolvedCount = allComments.filter((c) => getStatus(c) === 'resolved').length;
+  const latestVersion = project.versions.length > 0 ? project.versions[project.versions.length - 1] : null;
 
   return (
     <motion.div
@@ -140,6 +171,17 @@ export default function ProjectOverlay({
           </div>
         </div>
 
+        {latestVersion && (
+          <button
+            type="button"
+            onClick={() => onOpenVersion?.(latestVersion.id)}
+            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: project.color }}
+          >
+            <ArrowUpRight size={14} strokeWidth={2.5} /> Open latest version
+          </button>
+        )}
+
         <div className="mt-4">
           <div className="text-[13.5px] font-medium text-stone-500">Team</div>
           <div className="mt-1.5 flex -space-x-2">
@@ -155,6 +197,21 @@ export default function ProjectOverlay({
             ))}
           </div>
         </div>
+
+        {latestVersion && (
+          <div className="mt-4">
+            <div className="text-[13.5px] font-medium text-stone-500">Comments · {latestVersion.label}</div>
+            <div className="mt-1.5 max-h-[180px] space-y-0.5 overflow-y-auto pr-0.5">
+              {latestVersion.comments.length === 0 ? (
+                <div className="px-2 py-1.5 text-[13px] text-stone-400">No comments yet</div>
+              ) : (
+                latestVersion.comments.map((c) => (
+                  <CommentPreviewRow key={c.id} comment={c} onClick={() => onOpenComment?.(latestVersion.id, c.id)} />
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           <div className="text-[13.5px] font-medium text-stone-500">Versions</div>

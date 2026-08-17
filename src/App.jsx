@@ -397,6 +397,17 @@ export default function App() {
 
   const reducedMotion = useReducedMotion();
 
+  // One-time nudge pointing at the Cursor/Comment mode toggle, the first
+  // time anyone on this account ever sees it — same one-time-flag pattern
+  // as the celebration toasts above, just not a celebration.
+  const [modeHintDismissed, setModeHintDismissed] = useState(false);
+  const showCommentModeHint =
+    !modeHintDismissed && Boolean(session?.email) && !hasCelebrated(session.email, 'comment-mode-hint');
+  const dismissCommentModeHint = useCallback(() => {
+    setModeHintDismissed(true);
+    if (session?.email) markCelebrated(session.email, 'comment-mode-hint');
+  }, [session]);
+
   // The API call already set the session cookie — this just updates local
   // state to match. The welcome popup is reserved for brand-new signups,
   // not every ordinary sign-in.
@@ -454,10 +465,10 @@ export default function App() {
   );
 
   const handleOpenReview = useCallback(
-    (projectId, versionId) => {
+    (projectId, versionId, commentId) => {
       if (!arrived || destination?.kind !== 'project' || destination.projectId !== projectId) return;
       setArrived(false);
-      setDestination({ kind: 'bloom', projectId, versionId });
+      setDestination({ kind: 'bloom', projectId, versionId, focusCommentId: commentId ?? null });
       // The NavDock that opens these is hidden on the Review surface (see
       // its render below) — closing them on the way in avoids a panel
       // being left stranded open there with no dock icon left to close it.
@@ -924,6 +935,7 @@ export default function App() {
                 project={focusedProject}
                 onBack={handleGoHome}
                 onOpenVersion={(versionId) => handleOpenReview(focusedProject.id, versionId)}
+                onOpenComment={(versionId, commentId) => handleOpenReview(focusedProject.id, versionId, commentId)}
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
                 onDeleteProject={handleDeleteProject}
@@ -946,6 +958,9 @@ export default function App() {
                 people={assignablePeople}
                 readOnly={false}
                 visitingOwnerName={visitingOwnerName}
+                initialFocusCommentId={destination.focusCommentId}
+                showModeHint={showCommentModeHint}
+                onDismissModeHint={dismissCommentModeHint}
               />
             )}
           </AnimatePresence>

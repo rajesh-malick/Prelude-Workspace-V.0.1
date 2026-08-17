@@ -66,11 +66,15 @@ export default function ReviewOverlay({
   people,
   readOnly,
   visitingOwnerName,
+  initialFocusCommentId,
+  showModeHint,
+  onDismissModeHint,
 }) {
   const [pin, setPin] = useState(null);
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [highlightCommentId, setHighlightCommentId] = useState(null);
   // Both a native <video controls> element and a cross-origin iframe (any
   // pasted external link) have the same either/or: either the element
   // receives clicks itself (so you can hit play/seek, or scroll/click a
@@ -89,6 +93,24 @@ export default function ReviewOverlay({
   useEffect(() => {
     if (pin) inputRef.current?.focus();
   }, [pin]);
+
+  // Arriving here from a "jump to this comment" click (e.g. the Grove
+  // sidebar's comment preview) — open the sidebar it lives in, scroll to
+  // it once the open animation has had a moment to run, and hold a brief
+  // highlight so it's obvious which one you were sent to.
+  useEffect(() => {
+    if (!initialFocusCommentId) return;
+    setSidebarOpen(true);
+    setHighlightCommentId(initialFocusCommentId);
+    const scrollTimer = setTimeout(() => {
+      document.getElementById(`comment-${initialFocusCommentId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 250);
+    const clearTimer = setTimeout(() => setHighlightCommentId(null), 2500);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [initialFocusCommentId]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -332,55 +354,75 @@ export default function ReviewOverlay({
         )}
       </div>
 
-      {/* Floating header — title, status, controls. A fixed dark, mostly-
-          opaque bar rather than the light "glass-surface" used everywhere
-          else: this overlays an arbitrary uploaded image/video/webpage,
-          which can just as easily be light-colored as dark, and a light
-          frosted panel over light content was reading as nearly invisible.
-          Dark-on-anything holds contrast regardless of what's underneath.
-          Deliberately slim (not the taller glass-surface padding used
-          elsewhere) so it stops covering an embedded page's own header. */}
+      {/* Floating header — deliberately minimal: back + mode toggle + sidebar
+          toggle, nothing else. Version name/status used to live here too as
+          a centered title and a status row, but that's already shown in the
+          "Version details" panel one click away, and duplicating it here
+          just made the bar taller and easier to lose against busy content.
+          Still a fixed dark, mostly-opaque bar (not the light "glass-surface"
+          used elsewhere) since this overlays an arbitrary uploaded image/
+          video/webpage that can be light-colored just as easily as dark. */}
       <div className="pointer-events-auto absolute left-3 right-3 top-3 z-20 flex items-center justify-between gap-2 rounded-xl bg-stone-900/85 px-3 py-1.5 text-white backdrop-blur-md">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex min-w-0 flex-none items-center gap-1 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
+          className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-[12.5px] font-medium text-stone-300 transition-colors hover:text-white"
         >
-          <ArrowLeft size={13} strokeWidth={2} /> <span className="truncate">{project.name}</span>
+          <ArrowLeft size={13} strokeWidth={2} className="flex-none" />
+          <span className="truncate">{project.name}</span>
+          <span className="flex-none text-stone-600">/</span>
+          <span className="truncate font-semibold text-white">{version.label}</span>
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-center text-[13.5px] font-semibold text-white">{version.label}</h2>
         <div className="flex flex-none items-center gap-1.5">
-          {visitingOwnerName && (
-            <div className="hidden items-center gap-1 rounded-full bg-amber-400/20 px-2 py-1 text-[11px] font-medium text-amber-200 sm:flex">
-              <MapPin size={11} strokeWidth={2} /> Editing {visitingOwnerName}'s
-            </div>
-          )}
-          <div className="hidden items-center gap-1 text-[11.5px] text-stone-300 sm:flex">
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
-            {STATUS_LABEL[version.status] ?? version.status}
-          </div>
           {/* The click-anywhere-to-comment / interact-with-the-asset toggle
               — moved up here from the bottom of the canvas so switching
               modes doesn't mean a trip across the whole screen every time. */}
           {!readOnly && (assetKind === 'video' || assetKind === 'html') && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAssetInteractive((v) => !v);
-              }}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                assetInteractive ? 'bg-white text-stone-900' : 'bg-white/10 text-stone-200 hover:bg-white/20'
-              }`}
-            >
-              {assetInteractive ? (
-                <>
-                  <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
-                </>
-              ) : (
-                'Cursor mode'
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAssetInteractive((v) => !v);
+                  onDismissModeHint?.();
+                }}
+                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  assetInteractive ? 'bg-white text-stone-900' : 'bg-white/10 text-stone-200 hover:bg-white/20'
+                }`}
+              >
+                {assetInteractive ? (
+                  <>
+                    <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
+                  </>
+                ) : (
+                  'Cursor mode'
+                )}
+              </button>
+              {/* First-time-ever nudge so people discover there's a second
+                  mode at all, instead of only ever seeing "Cursor mode" and
+                  never finding out what it toggles to. Shown once per
+                  account (see App.jsx), dismissed by clicking it away or by
+                  actually using the toggle above. */}
+              {showModeHint && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 rounded-lg bg-white p-2.5 text-stone-800 shadow-lg"
+                >
+                  <span className="absolute -top-1.5 right-4 block h-3 w-3 rotate-45 bg-white" />
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[12px] leading-snug">Switch here to scroll, play, or click the actual page or video.</p>
+                    <button
+                      type="button"
+                      onClick={() => onDismissModeHint?.()}
+                      aria-label="Dismiss tip"
+                      className="flex-none text-stone-400 transition-colors hover:text-stone-600"
+                    >
+                      <X size={13} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
           )}
           <button
             type="button"
@@ -410,6 +452,13 @@ export default function ReviewOverlay({
             className="glass-surface absolute bottom-24 right-4 top-20 z-20 flex w-[300px] flex-col overflow-hidden rounded-2xl"
           >
             <div className="flex-1 overflow-y-auto p-4">
+              {/* Moved down from the header when it went minimal — still a
+                  persistent reminder you're editing someone else's territory. */}
+              {visitingOwnerName && (
+                <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[12.5px] font-medium text-amber-700">
+                  <MapPin size={13} strokeWidth={2} /> Editing {visitingOwnerName}'s territory
+                </div>
+              )}
               <div className="text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">Version details</div>
               <div className="mt-2 space-y-2 text-[13.5px]">
                 <div className="flex justify-between gap-2">
@@ -468,7 +517,12 @@ export default function ReviewOverlay({
                 {version.comments.map((c) => {
                   const CommentTagIcon = c.tag ? TAG_ICON[c.tag] : null;
                   return (
-                    <div key={c.id} className="rounded-lg bg-black/[0.03] p-2.5">
+                    <div
+                      key={c.id}
+                      id={`comment-${c.id}`}
+                      className="rounded-lg bg-black/[0.03] p-2.5 transition-shadow"
+                      style={c.id === highlightCommentId ? { boxShadow: `0 0 0 2px ${project.color}` } : undefined}
+                    >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 text-[13px] font-semibold text-stone-800">
                           {c.author}
