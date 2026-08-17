@@ -51,6 +51,79 @@ function positionFor(comment, i) {
   return FALLBACK_SLOTS[i % FALLBACK_SLOTS.length];
 }
 
+// A real two-option switch (both states always visible, a sliding thumb
+// shows which is active) rather than one button whose label swapped —
+// easier to tell at a glance there even are two modes, and which one
+// you're currently in, instead of reading a single word each time.
+function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
+  return (
+    <div className="relative">
+      <div className="relative flex items-center gap-0.5 rounded-full bg-white/10 p-1 text-[11px] font-medium backdrop-blur-md">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(false);
+          }}
+          className={`relative z-10 rounded-full px-2.5 py-1 transition-colors ${
+            interactive ? 'text-stone-300 hover:text-white' : 'text-stone-900'
+          }`}
+        >
+          {!interactive && (
+            <motion.span
+              layoutId="mode-switch-thumb"
+              className="absolute inset-0 -z-10 rounded-full bg-white"
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            />
+          )}
+          Cursor
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange(true);
+          }}
+          className={`relative z-10 flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors ${
+            interactive ? 'text-stone-900' : 'text-stone-300 hover:text-white'
+          }`}
+        >
+          {interactive && (
+            <motion.span
+              layoutId="mode-switch-thumb"
+              className="absolute inset-0 -z-10 rounded-full bg-white"
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            />
+          )}
+          <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment
+        </button>
+      </div>
+      {/* First-time-ever nudge so people discover there's a second mode at
+          all. Shown once per account (see App.jsx), dismissed by clicking
+          it away or by actually using the switch above. */}
+      {showHint && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 rounded-lg bg-white p-2.5 text-stone-800 shadow-lg"
+        >
+          <span className="absolute -top-1.5 right-4 block h-3 w-3 rotate-45 bg-white" />
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[12px] leading-snug">Switch to Comment to scroll, play, or click the actual content.</p>
+            <button
+              type="button"
+              onClick={onDismissHint}
+              aria-label="Dismiss tip"
+              className="flex-none text-stone-400 transition-colors hover:text-stone-600"
+            >
+              <X size={13} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Review is "the center of Prelude" — the prototype dominates, edge to edge,
 // with everything else (title, status, version details, the full comment
 // list) floating on top of it rather than competing with it for space.
@@ -383,46 +456,15 @@ export default function ReviewOverlay({
           </button>
           <div className="flex items-center gap-1.5">
             {!readOnly && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAssetInteractive((v) => !v);
-                    onDismissModeHint?.();
-                  }}
-                  className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                    assetInteractive ? 'bg-white text-stone-900' : 'bg-white/10 text-stone-200 hover:bg-white/20'
-                  }`}
-                >
-                  {assetInteractive ? (
-                    <>
-                      <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
-                    </>
-                  ) : (
-                    'Cursor mode'
-                  )}
-                </button>
-                {showModeHint && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 rounded-lg bg-white p-2.5 text-stone-800 shadow-lg"
-                  >
-                    <span className="absolute -top-1.5 right-4 block h-3 w-3 rotate-45 bg-white" />
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-[12px] leading-snug">Switch here to scroll, play, or click the actual page.</p>
-                      <button
-                        type="button"
-                        onClick={() => onDismissModeHint?.()}
-                        aria-label="Dismiss tip"
-                        className="flex-none text-stone-400 transition-colors hover:text-stone-600"
-                      >
-                        <X size={13} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ModeSwitch
+                interactive={assetInteractive}
+                onChange={(v) => {
+                  setAssetInteractive(v);
+                  onDismissModeHint?.();
+                }}
+                showHint={showModeHint}
+                onDismissHint={() => onDismissModeHint?.()}
+              />
             )}
             <button
               type="button"
@@ -456,46 +498,15 @@ export default function ReviewOverlay({
 
           <div className="pointer-events-auto absolute right-3 top-3 z-20 flex items-center gap-1.5">
             {!readOnly && assetKind === 'video' && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAssetInteractive((v) => !v);
-                    onDismissModeHint?.();
-                  }}
-                  className={`flex items-center gap-1 rounded-full px-3 py-2 text-[11px] font-medium backdrop-blur-md transition-colors ${
-                    assetInteractive ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
-                  }`}
-                >
-                  {assetInteractive ? (
-                    <>
-                      <MessageSquarePlus size={12} strokeWidth={2.25} /> Comment mode
-                    </>
-                  ) : (
-                    'Cursor mode'
-                  )}
-                </button>
-                {showModeHint && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 top-[calc(100%+8px)] z-30 w-52 rounded-lg bg-white p-2.5 text-stone-800 shadow-lg"
-                  >
-                    <span className="absolute -top-1.5 right-4 block h-3 w-3 rotate-45 bg-white" />
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-[12px] leading-snug">Switch here to scroll, play, or click the actual video.</p>
-                      <button
-                        type="button"
-                        onClick={() => onDismissModeHint?.()}
-                        aria-label="Dismiss tip"
-                        className="flex-none text-stone-400 transition-colors hover:text-stone-600"
-                      >
-                        <X size={13} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ModeSwitch
+                interactive={assetInteractive}
+                onChange={(v) => {
+                  setAssetInteractive(v);
+                  onDismissModeHint?.();
+                }}
+                showHint={showModeHint}
+                onDismissHint={() => onDismissModeHint?.()}
+              />
             )}
             <button
               type="button"
