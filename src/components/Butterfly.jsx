@@ -94,24 +94,26 @@ export default function Butterfly({ comment, style, onCycleStatus, onAssign, peo
               )}
             </div>
             <div className="mt-1 text-[14px] leading-snug text-stone-700">{comment.text}</div>
-            <div className="mt-1.5 flex items-center justify-between gap-2">
-              {getStatusNote(comment) ? (
-                <div className="text-[11.5px] font-medium text-stone-600">{getStatusNote(comment)}</div>
-              ) : (
-                <span />
+            {/* Status note on its own full-width line rather than crammed
+                into the same row as the pickers — that squeezed a whole
+                sentence ("Assigned to X by Y") into a sliver of leftover
+                space next to two pills, wrapping it into an unreadable
+                4-line stack. Same layout FocusReviewView's comment rows
+                already use for this. */}
+            {getStatusNote(comment) && (
+              <div className="mt-1.5 text-[11.5px] font-medium text-stone-600">{getStatusNote(comment)}</div>
+            )}
+            <div className="mt-1.5 flex items-center justify-end gap-1">
+              {onAssign && (
+                <AssigneePicker
+                  assignee={comment.assignee ?? null}
+                  onChange={(name) => onAssign(name)}
+                  people={people}
+                  size="sm"
+                  dropUp={dropUp}
+                />
               )}
-              <div className="flex items-center gap-1">
-                {onAssign && (
-                  <AssigneePicker
-                    assignee={comment.assignee ?? null}
-                    onChange={(name) => onAssign(name)}
-                    people={people}
-                    size="sm"
-                    dropUp={dropUp}
-                  />
-                )}
-                <StatusDropdown status={status} onChange={(s) => onCycleStatus?.(s)} size="sm" dropUp={dropUp} />
-              </div>
+              <StatusDropdown status={status} onChange={(s) => onCycleStatus?.(s)} size="sm" dropUp={dropUp} />
             </div>
           </motion.div>
         )}

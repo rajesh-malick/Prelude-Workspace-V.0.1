@@ -90,8 +90,13 @@ export default function ProjectOverlay({
       transition={{ duration: 0.45, ease: 'easeOut' }}
       className="fixed right-6 top-24 z-20 w-[320px]"
     >
+      {/* max-h + overflow-y-auto on the whole card, not just the inner
+          versions/comments lists — those inner scroll areas alone still
+          left the rest of the card (Team, the "Open latest version" CTA,
+          older versions) permanently unreachable on a short viewport, with
+          no way to scroll down to them at all. */}
       <div
-        className="glass-surface rounded-2xl p-5"
+        className="glass-surface max-h-[calc(100vh-7.5rem)] overflow-y-auto rounded-2xl p-5"
         style={visitingOwnerName ? { boxShadow: 'inset 3px 0 0 #C98A2E, var(--shadow)' } : undefined}
       >
         {/* Persistent reminder you're not in your own Grove — every control
