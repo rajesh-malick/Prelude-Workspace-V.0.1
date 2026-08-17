@@ -101,6 +101,12 @@ export default function FocusReviewView({
     ? 'file'
     : null;
 
+  // See Grove's ReviewOverlay for the reasoning — a live website brings
+  // its own logo/nav into the exact corners our controls used to float
+  // over, so instead of overlaying it, a reserved strip renders above it
+  // and the site gets 100% of the space below.
+  const framed = assetKind === 'html';
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -110,7 +116,7 @@ export default function FocusReviewView({
       className="fixed inset-0 z-30 overflow-hidden bg-black"
     >
       <div
-        className="absolute inset-0"
+        className={`absolute inset-x-0 bottom-0 ${framed ? 'top-12' : 'top-0'}`}
         style={{ background: version.assetUrl ? '#111' : `linear-gradient(135deg, ${project.color}33, ${project.color}11)` }}
       >
         {assetKind === 'image' && (
@@ -152,33 +158,59 @@ export default function FocusReviewView({
         )}
       </div>
 
-      {/* No header bar — just two independent floating controls, each with
-          its own dark high-contrast pill (not one shared bar) since this
-          overlays arbitrary uploaded content that can be light-colored
-          just as easily as dark. Version name/status live in the Details
-          tab, one tap away via the sidebar toggle. */}
-      <button
-        type="button"
-        onClick={onBack}
-        title={`Back to ${project.name}`}
-        aria-label={`Back to ${project.name}`}
-        className="pointer-events-auto absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900/85 text-white backdrop-blur-md transition-colors hover:bg-stone-900"
-      >
-        <ArrowLeft size={16} strokeWidth={2.25} />
-      </button>
+      {framed ? (
+        /* Reserved strip, not an overlay — see Grove's ReviewOverlay. */
+        <div className="pointer-events-auto absolute inset-x-0 top-0 z-20 flex h-12 items-center justify-between bg-stone-950 px-3">
+          <button
+            type="button"
+            onClick={onBack}
+            title={`Back to ${project.name}`}
+            aria-label={`Back to ${project.name}`}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-stone-300 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft size={16} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((v) => !v)}
+            title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+            aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+            aria-pressed={sidebarOpen}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              sidebarOpen ? 'bg-white text-stone-900' : 'text-stone-300 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {sidebarOpen ? <PanelRightClose size={16} strokeWidth={2.25} /> : <PanelRightOpen size={16} strokeWidth={2.25} />}
+          </button>
+        </div>
+      ) : (
+        /* No competing corner UI on images/video, so these stay floating
+            over the content, each its own dark high-contrast pill. */
+        <>
+          <button
+            type="button"
+            onClick={onBack}
+            title={`Back to ${project.name}`}
+            aria-label={`Back to ${project.name}`}
+            className="pointer-events-auto absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900/85 text-white backdrop-blur-md transition-colors hover:bg-stone-900"
+          >
+            <ArrowLeft size={16} strokeWidth={2.25} />
+          </button>
 
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((v) => !v)}
-        title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
-        aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
-        aria-pressed={sidebarOpen}
-        className={`pointer-events-auto absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-md transition-colors ${
-          sidebarOpen ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
-        }`}
-      >
-        {sidebarOpen ? <PanelRightClose size={16} strokeWidth={2.25} /> : <PanelRightOpen size={16} strokeWidth={2.25} />}
-      </button>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((v) => !v)}
+            title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+            aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
+            aria-pressed={sidebarOpen}
+            className={`pointer-events-auto absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-md transition-colors ${
+              sidebarOpen ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
+            }`}
+          >
+            {sidebarOpen ? <PanelRightClose size={16} strokeWidth={2.25} /> : <PanelRightOpen size={16} strokeWidth={2.25} />}
+          </button>
+        </>
+      )}
 
       <AnimatePresence>
         {sidebarOpen && (
