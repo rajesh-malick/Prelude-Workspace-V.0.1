@@ -42,6 +42,19 @@ function addReplyAtPath(replies, path, newReply) {
   return replies.map((r) => (r.id === headId ? { ...r, replies: addReplyAtPath(r.replies ?? [], rest, newReply) } : r));
 }
 
+// Same path convention as above — walks down to whichever node is being
+// replied to and returns its author, so a reply-to-a-reply notifies that
+// specific person rather than always the top-level comment's author.
+function findReplyTargetAuthor(comment, path) {
+  let node = comment;
+  for (const id of path) {
+    const next = (node.replies ?? []).find((r) => r.id === id);
+    if (!next) break;
+    node = next;
+  }
+  return node.author;
+}
+
 // One-time celebration flags (first project ever planted, first version
 // ever published) — deliberately client-side-only, not a backend field:
 // this is cosmetic flavor, not data worth a schema change for, and the
@@ -322,6 +335,25 @@ export default function App() {
       cancelled = true;
     };
   }, [session, notificationsLoadedFor]);
+
+  // No websocket/live-push server exists (Vercel serverless functions
+  // can't hold a persistent connection open) — polling the same endpoint
+  // every 20s is the practical stand-in. Skips the fetch while the tab
+  // isn't visible so a backgrounded tab doesn't keep hitting the API for
+  // no one to see. Deliberately doesn't touch lastSeenNotificationCount —
+  // that's "confirmed seen by opening the panel", not "the app happened
+  // to refresh in the background".
+  useEffect(() => {
+    if (!session?.email) return;
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      fetchNotifications().then((loaded) => {
+        if (soundOn && loaded.length > lastSeenNotificationCount) playNotificationChime();
+        setNotifications(loaded);
+      });
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [session, soundOn, lastSeenNotificationCount]);
 
   useEffect(() => {
     if (!viewingTerritory || territoryLoadedFor === viewingTerritory) return;
@@ -638,8 +670,17 @@ export default function App() {
           };
         })
       );
+      // Only when it's actually someone else's project — commenting on
+      // your own Grove has no one to notify, same as the territory-visit
+      // notice above only firing when visiting someone else's.
+      if (isVisitingOther && viewingTerritory) {
+        const project = displayedProjects.find((p) => p.id === projectId);
+        const version = project?.versions.find((v) => v.id === versionId);
+        const where = version ? `${project.name} - ${version.label}` : project?.name ?? 'your project';
+        notify(viewingTerritory, `${userName} commented on "${where}".`);
+      }
     },
-    [userName, updateProjects]
+    [userName, updateProjects, isVisitingOther, viewingTerritory, displayedProjects]
   );
 
   // Resolved is a plain boolean now, not a staged workflow — the old
@@ -695,8 +736,22 @@ export default function App() {
           };
         })
       );
+
+      // Notify whoever left the specific comment/reply this one is
+      // actually replying to — not always the top-level comment's author,
+      // since a reply can itself be replied to.
+      const project = displayedProjects.find((p) => p.id === projectId);
+      const version = project?.versions.find((v) => v.id === versionId);
+      const comment = version?.comments.find((c) => c.id === commentId);
+      if (comment) {
+        const targetAuthor = findReplyTargetAuthor(comment, parentReplyPath);
+        const targetEmail = territories.find((t) => t.ownerName === targetAuthor)?.ownerEmail;
+        if (targetAuthor !== userName && targetEmail) {
+          notify(targetEmail, `${userName} replied to your comment on "${project.name}".`);
+        }
+      }
     },
-    [userName, updateProjects]
+    [userName, updateProjects, displayedProjects, territories]
   );
 
   const handleCreateVersion = useCallback(
