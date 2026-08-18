@@ -26,6 +26,7 @@ import FocusDashboard from './focus/FocusDashboard';
 import FocusProjectView from './focus/FocusProjectView';
 import FocusReviewView from './focus/FocusReviewView';
 import { projects as seedProjects } from './data/projects';
+import { playNotificationChime } from './utils/notificationSound';
 import { getBloomWorldPosition } from './utils/treeGeometry';
 
 let nextId = 1000;
@@ -310,6 +311,10 @@ export default function App() {
     let cancelled = false;
     fetchNotifications().then((loaded) => {
       if (cancelled) return;
+      // Session just started, so lastSeenNotificationCount is still its
+      // reset-to-0 default — anything at all waiting counts as "new" this
+      // once, matching the unread dot's own logic below.
+      if (soundOn && loaded.length > 0) playNotificationChime();
       setNotifications(loaded);
       setNotificationsLoadedFor(session.email);
     });
@@ -549,14 +554,17 @@ export default function App() {
         // Opening the panel is also the moment to check for anything new
         // — there's no live push, so this is the freshest a "real-time"
         // feel gets without a websocket — and to clear the unread dot.
+        // A chime here plays exactly when more turned up than were last
+        // confirmed seen, same comparison the unread dot itself uses.
         fetchNotifications().then((loaded) => {
+          if (soundOn && loaded.length > lastSeenNotificationCount) playNotificationChime();
           setNotifications(loaded);
           setLastSeenNotificationCount(loaded.length);
         });
       }
       return next;
     });
-  }, []);
+  }, [soundOn, lastSeenNotificationCount]);
   const handleToggleSettings = useCallback(() => {
     setNotificationsOpen(false);
     setSettingsOpen((v) => !v);
