@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paintbrush, Star } from 'lucide-react';
 import { isResolved, resolvedNote } from '../utils/commentStatus';
+import { TAG_ICON, TAG_LABEL, TAG_ACCENT } from '../utils/commentTags';
 import ResolveToggle from './ResolveToggle';
 import ReplyThread from './ReplyThread';
 
@@ -9,9 +9,6 @@ import ReplyThread from './ReplyThread';
 // flutter gently; resolved ones sit dim and still. Hover to expand.
 // `comment.tag` is optional — untagged comments render as a plain
 // butterfly with no badge.
-const TAG_ICON = { ui: Paintbrush, improvement: Star };
-const TAG_LABEL = { ui: 'UI improvement', improvement: 'Improvement' };
-const TAG_ACCENT = { ui: 'text-sky-600', improvement: 'text-amber-500' };
 
 export default function Butterfly({ comment, style, onResolve, onAddReply, readOnly }) {
   const [open, setOpen] = useState(false);

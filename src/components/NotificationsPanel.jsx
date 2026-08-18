@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion';
-import { Paintbrush, Star, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { isResolved } from '../utils/commentStatus';
 import { formatRelativeTime } from '../utils/relativeTime';
-
-const TAG_ICON = { ui: Paintbrush, improvement: Star };
+import { TAG_ICON } from '../utils/commentTags';
 
 // Flattens every comment across every project/version into one feed,
 // newest-appended-first (comments are pushed to the end of their array,

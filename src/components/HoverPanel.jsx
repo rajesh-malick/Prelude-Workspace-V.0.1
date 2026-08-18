@@ -1,8 +1,6 @@
 import { motion } from 'framer-motion';
-import { Paintbrush, Star } from 'lucide-react';
 import { isResolved } from '../utils/commentStatus';
-
-const TAG_ICON = { ui: Paintbrush, improvement: Star };
+import { TAG_ICON } from '../utils/commentTags';
 
 // Walks versions newest-first and returns the latest comment found, so a
 // quick hover surfaces feedback without drilling into Project -> Review.

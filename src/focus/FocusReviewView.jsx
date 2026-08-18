@@ -2,9 +2,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Paintbrush,
-  Star,
-  MessageSquare,
   Send,
   File as FileIcon,
   PanelRightOpen,
@@ -16,6 +13,9 @@ import { resolvedNote } from '../utils/commentStatus';
 import ResolveToggle from '../components/ResolveToggle';
 import ReplyThread from '../components/ReplyThread';
 import DetailsCommentsSwitch from '../components/DetailsCommentsSwitch';
+import SlashTagMenu from '../components/SlashTagMenu';
+import useSlashTagPicker from '../hooks/useSlashTagPicker';
+import { TAG_OPTIONS, TAG_ICON } from '../utils/commentTags';
 
 const STATUS_LABEL = {
   approved: 'Approved',
@@ -25,13 +25,6 @@ const STATUS_LABEL = {
 };
 
 const ASSET_KIND_LABEL = { image: 'Image', video: 'Video', html: 'HTML prototype', file: 'File' };
-
-const TAG_OPTIONS = [
-  { value: null, label: 'Note', Icon: MessageSquare },
-  { value: 'ui', label: 'UI improvement', Icon: Paintbrush },
-  { value: 'improvement', label: 'Improvement', Icon: Star },
-];
-const TAG_ICON = { ui: Paintbrush, improvement: Star };
 
 function CommentRow({ comment, onResolve, onAddReply, readOnly }) {
   const TagIcon = comment.tag ? TAG_ICON[comment.tag] : null;
@@ -78,6 +71,7 @@ export default function FocusReviewView({
 }) {
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
+  const slashTags = useSlashTagPicker(draft, setDraft, setTag);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('details');
 
@@ -325,12 +319,16 @@ export default function FocusReviewView({
                         </button>
                       ))}
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="relative flex items-center gap-1.5">
+                      {slashTags.open && (
+                        <SlashTagMenu matches={slashTags.matches} highlighted={slashTags.highlighted} onSelect={slashTags.select} />
+                      )}
                       <input
                         type="text"
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        placeholder="Add a comment…"
+                        onKeyDown={slashTags.onKeyDown}
+                        placeholder="Add a comment… (try /)"
                         className="min-w-0 flex-1 rounded-full bg-black/5 px-3 py-1.5 text-[13.5px] text-stone-800 outline-none placeholder:text-stone-400"
                       />
                       <button

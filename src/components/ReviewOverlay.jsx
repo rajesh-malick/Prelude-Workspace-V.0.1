@@ -2,9 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Paintbrush,
-  Star,
-  MessageSquare,
   Send,
   File as FileIcon,
   X,
@@ -17,7 +14,10 @@ import Butterfly from './Butterfly';
 import ResolveToggle from './ResolveToggle';
 import ReplyThread from './ReplyThread';
 import DetailsCommentsSwitch from './DetailsCommentsSwitch';
+import SlashTagMenu from './SlashTagMenu';
+import useSlashTagPicker from '../hooks/useSlashTagPicker';
 import { resolvedNote } from '../utils/commentStatus';
+import { TAG_OPTIONS, TAG_ICON, TAG_LABEL } from '../utils/commentTags';
 
 const STATUS_LABEL = {
   approved: 'Approved',
@@ -25,9 +25,6 @@ const STATUS_LABEL = {
   draft: 'Draft',
   blocked: 'Blocked',
 };
-
-const TAG_ICON = { ui: Paintbrush, improvement: Star };
-const TAG_LABEL = { ui: 'UI improvement', improvement: 'Improvement' };
 
 const ASSET_KIND_LABEL = { image: 'Image', video: 'Video', html: 'HTML prototype', file: 'File' };
 
@@ -38,12 +35,6 @@ const FALLBACK_SLOTS = [
   { top: '58%', left: '68%' },
   { top: '38%', left: '48%' },
   { top: '72%', left: '30%' },
-];
-
-const TAG_OPTIONS = [
-  { value: null, label: 'Note', Icon: MessageSquare },
-  { value: 'ui', label: 'UI improvement', Icon: Paintbrush },
-  { value: 'improvement', label: 'Improvement', Icon: Star },
 ];
 
 function positionFor(comment, i) {
@@ -153,6 +144,7 @@ export default function ReviewOverlay({
   const [pin, setPin] = useState(null);
   const [draft, setDraft] = useState('');
   const [tag, setTag] = useState(null);
+  const slashTags = useSlashTagPicker(draft, setDraft, setTag);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('details');
   const [highlightCommentId, setHighlightCommentId] = useState(null);
@@ -416,13 +408,17 @@ export default function ReviewOverlay({
                     <X size={13} strokeWidth={2.5} />
                   </button>
                 </div>
-                <div className="mt-1.5 flex items-center gap-1.5">
+                <div className="relative mt-1.5 flex items-center gap-1.5">
+                  {slashTags.open && (
+                    <SlashTagMenu matches={slashTags.matches} highlighted={slashTags.highlighted} onSelect={slashTags.select} />
+                  )}
                   <input
                     ref={inputRef}
                     type="text"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Leave a comment here…"
+                    onKeyDown={slashTags.onKeyDown}
+                    placeholder="Leave a comment here… (try /)"
                     className="min-w-0 flex-1 rounded-full bg-black/5 px-3 py-1.5 text-[13.5px] text-stone-800 outline-none placeholder:text-stone-400"
                   />
                   <button
