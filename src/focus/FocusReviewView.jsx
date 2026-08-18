@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Send,
+  MessageSquarePlus,
+  X,
   File as FileIcon,
   PanelRightOpen,
   PanelRightClose,
@@ -74,6 +76,10 @@ export default function FocusReviewView({
   const slashTags = useSlashTagPicker(draft, setDraft, setTag);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('details');
+  // Collapsed to a single icon by default — the full tag row + input used
+  // to permanently eat a few lines of the sidebar even when nobody was
+  // actively writing anything, crowding out the comment list above it.
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -82,6 +88,7 @@ export default function FocusReviewView({
     onAddComment({ text, tag });
     setDraft('');
     setTag(null);
+    setComposerOpen(false);
   };
 
   const assetKind = version.assetType?.startsWith('image/')
@@ -300,48 +307,77 @@ export default function FocusReviewView({
                   ))}
                 </div>
 
-                {!readOnly && (
-                  <form onSubmit={handleSubmit} className="flex-none border-t border-black/5 p-3">
-                    <div className="mb-2 flex items-center gap-1 rounded-full bg-black/5 p-1">
-                      {TAG_OPTIONS.map((opt) => (
+                {!readOnly &&
+                  (composerOpen ? (
+                    <form onSubmit={handleSubmit} className="flex-none border-t border-black/5 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1 rounded-full bg-black/5 p-1">
+                          {TAG_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => setTag(opt.value)}
+                              title={opt.label}
+                              aria-pressed={tag === opt.value}
+                              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+                                tag === opt.value ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-700'
+                              }`}
+                            >
+                              <opt.Icon size={13} strokeWidth={2.5} />
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
                         <button
-                          key={opt.label}
                           type="button"
-                          onClick={() => setTag(opt.value)}
-                          title={opt.label}
-                          aria-pressed={tag === opt.value}
-                          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
-                            tag === opt.value ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-700'
-                          }`}
+                          onClick={() => {
+                            setComposerOpen(false);
+                            setDraft('');
+                            setTag(null);
+                          }}
+                          aria-label="Cancel comment"
+                          className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-600"
                         >
-                          <opt.Icon size={13} strokeWidth={2.5} />
-                          {opt.label}
+                          <X size={14} strokeWidth={2.5} />
                         </button>
-                      ))}
-                    </div>
-                    <div className="relative flex items-center gap-1.5">
-                      {slashTags.open && (
-                        <SlashTagMenu matches={slashTags.matches} highlighted={slashTags.highlighted} onSelect={slashTags.select} />
-                      )}
-                      <input
-                        type="text"
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={slashTags.onKeyDown}
-                        placeholder="Add a comment… (try /)"
-                        className="min-w-0 flex-1 rounded-full bg-black/5 px-3 py-1.5 text-[13.5px] text-stone-800 outline-none placeholder:text-stone-400"
-                      />
+                      </div>
+                      <div className="relative flex items-center gap-1.5">
+                        {slashTags.open && (
+                          <SlashTagMenu matches={slashTags.matches} highlighted={slashTags.highlighted} onSelect={slashTags.select} />
+                        )}
+                        <input
+                          autoFocus
+                          type="text"
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onKeyDown={slashTags.onKeyDown}
+                          placeholder="Add a comment… (try /)"
+                          className="min-w-0 flex-1 rounded-full bg-black/5 px-3 py-1.5 text-[13.5px] text-stone-800 outline-none placeholder:text-stone-400"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!draft.trim()}
+                          className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-white transition-opacity disabled:opacity-40"
+                          style={{ backgroundColor: project.color }}
+                        >
+                          <Send size={13} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex-none border-t border-black/5 p-3">
                       <button
-                        type="submit"
-                        disabled={!draft.trim()}
-                        className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-white transition-opacity disabled:opacity-40"
+                        type="button"
+                        onClick={() => setComposerOpen(true)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
                         style={{ backgroundColor: project.color }}
+                        title="Add a comment"
+                        aria-label="Add a comment"
                       >
-                        <Send size={13} strokeWidth={2.5} />
+                        <MessageSquarePlus size={15} strokeWidth={2.25} />
                       </button>
                     </div>
-                  </form>
-                )}
+                  ))}
               </div>
             )}
           </motion.div>
