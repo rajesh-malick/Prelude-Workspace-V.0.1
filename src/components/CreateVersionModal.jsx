@@ -123,7 +123,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="v1.3"
-          className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
+          className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-500 focus:bg-black/[0.07]"
         />
 
         <label className="mt-3 block text-[13px] font-medium text-stone-600">Description</label>
@@ -132,7 +132,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           onChange={(e) => setDescription(e.target.value)}
           placeholder="What is this version?"
           rows={2}
-          className="mt-1 w-full resize-none rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
+          className="mt-1 w-full resize-none rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-500 focus:bg-black/[0.07]"
         />
 
         <label className="mt-3 block text-[13px] font-medium text-stone-600">What changed</label>
@@ -141,7 +141,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           onChange={(e) => setChangelog(e.target.value)}
           placeholder="Summarize the changes since the last version"
           rows={2}
-          className="mt-1 w-full resize-none rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
+          className="mt-1 w-full resize-none rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-500 focus:bg-black/[0.07]"
         />
 
         <label className="mt-3 block text-[13px] font-medium text-stone-600">Status</label>
@@ -186,7 +186,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
             value={link}
             onChange={handleLinkChange}
             placeholder="Paste a link — .mp4, .webm, .jpg, .png, .html…"
-            className="w-full min-w-0 flex-1 bg-transparent text-[14px] text-stone-700 outline-none placeholder:text-stone-400"
+            className="w-full min-w-0 flex-1 bg-transparent text-[14px] text-stone-700 outline-none placeholder:text-stone-500"
           />
         </div>
         {!hasAsset && (

@@ -6,11 +6,20 @@ import { Check } from 'lucide-react';
 // confirm, not a blocking modal) so a stray click can't silently close out
 // real feedback; reopening a resolved comment is low-stakes and reversible,
 // so that direction is a plain, immediate click.
+//
+// A short horizontal pill with a label, not a bare square icon button —
+// the icon-only circle read as a blank, ambiguous shape (unclear it was
+// even a button, let alone what it did) and was prone to rendering as a
+// tall, oddly-proportioned pill once wrapped in a border. Text + icon in
+// a pill guarantees it's wider than tall and unambiguous about what it does.
 export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly, size = 'sm' }) {
   const [confirming, setConfirming] = useState(false);
   const wrapRef = useRef(null);
-  const dim = size === 'sm' ? 18 : 20;
-  const iconSize = size === 'sm' ? 11 : 12;
+  const isSmall = size === 'sm';
+  const iconSize = isSmall ? 10 : 11;
+  const pillClass = `flex flex-none items-center gap-1 rounded-full border ${
+    isSmall ? 'px-2 py-1 text-[10.5px]' : 'px-2.5 py-1 text-[11.5px]'
+  } font-medium`;
 
   useEffect(() => {
     if (!confirming) return;
@@ -28,12 +37,9 @@ export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly
       <div
         title={title}
         aria-label={title}
-        className={`flex flex-none items-center justify-center rounded-full border ${
-          resolved ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-stone-300 text-stone-300'
-        }`}
-        style={{ width: dim, height: dim }}
+        className={`${pillClass} ${resolved ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-stone-300 text-stone-400'}`}
       >
-        <Check size={iconSize} strokeWidth={3} />
+        <Check size={iconSize} strokeWidth={3} /> {resolved ? 'Resolved' : 'Unresolved'}
       </div>
     );
   }
@@ -48,21 +54,15 @@ export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly
         }}
         title={`${title} — click to reopen`}
         aria-label={`${title} — click to reopen`}
-        className="flex flex-none items-center justify-center rounded-full border border-emerald-500 bg-emerald-500 text-white transition-opacity hover:opacity-80"
-        style={{ width: dim, height: dim }}
+        className={`${pillClass} border-emerald-500 bg-emerald-500 text-white transition-opacity hover:opacity-80`}
       >
-        <Check size={iconSize} strokeWidth={3} />
+        <Check size={iconSize} strokeWidth={3} /> Resolved
       </button>
     );
   }
 
   return (
     <div ref={wrapRef} className="relative flex-none">
-      {/* Was a literally blank circle before — nothing hinted it was
-          clickable at all, let alone that it was the "mark resolved"
-          control. A visible (if muted) check outline reads as a checkbox
-          waiting to be ticked, the same convention as GitHub/Linear/Asana
-          task checkboxes. */}
       <button
         type="button"
         onClick={(e) => {
@@ -71,10 +71,9 @@ export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly
         }}
         title="Mark as resolved"
         aria-label="Mark as resolved"
-        className="flex items-center justify-center rounded-full border border-stone-300 text-stone-300 transition-colors hover:border-stone-500 hover:bg-black/5 hover:text-stone-500"
-        style={{ width: dim, height: dim }}
+        className={`${pillClass} border-stone-300 text-stone-500 transition-colors hover:border-stone-500 hover:bg-black/5 hover:text-stone-700`}
       >
-        <Check size={iconSize} strokeWidth={3} />
+        <Check size={iconSize} strokeWidth={3} /> Resolve
       </button>
       {confirming && (
         <div

@@ -58,7 +58,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Homepage Redesign"
-          className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
+          className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-500 focus:bg-black/[0.07]"
         />
 
         <label className="mt-3 block text-[11.5px] font-medium text-stone-600">Status</label>

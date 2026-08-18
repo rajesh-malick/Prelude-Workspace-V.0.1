@@ -1,62 +1,53 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LogOut, RotateCcw, MapPin, GitCommitHorizontal } from 'lucide-react';
-import { formatRelativeTime } from '../utils/relativeTime';
 
 const REPO = 'rajesh-malick/Prelude-Workspace-V.0.1';
 
-// Live, not a build-time stamp — fetches whatever is actually on GitHub's
-// main branch right now, so it reflects a direct push to GitHub too (not
-// just deploys that went through the usual build/commit/push flow).
-// Silently hides itself on failure (rate-limited, offline, repo renamed)
-// rather than showing a broken/stale credential-looking error.
-function DeployInfo() {
-  const [commit, setCommit] = useState(null);
+// "Version" here just means "how many times this has shipped" — the total
+// commit count on main, treated as a deploy counter since every commit to
+// main here goes out as a deploy. GitHub doesn't expose a commit count
+// directly, but asking for 1 commit per page and reading the `Link`
+// response header's rel="last" page number is the standard trick — that
+// page number IS the total count. Live (not a build-time stamp) so it
+// reflects a direct push to GitHub too, not just this app's own
+// build/commit/push flow. Silently hides itself on failure (rate-limited,
+// offline) rather than showing a broken/stale-looking error.
+function useCommitCount() {
+  const [count, setCount] = useState(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`https://api.github.com/repos/${REPO}/commits/main`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        if (cancelled) return;
-        setCommit({
-          sha: data.sha?.slice(0, 7),
-          message: data.commit?.message?.split('\n')[0],
-          date: data.commit?.author?.date,
-          url: data.html_url,
-        });
+    fetch(`https://api.github.com/repos/${REPO}/commits?sha=main&per_page=1`)
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        const match = res.headers.get('Link')?.match(/[?&]page=(\d+)>;\s*rel="last"/);
+        return match ? Number(match[1]) : 1;
       })
+      .then((n) => !cancelled && setCount(n))
       .catch(() => !cancelled && setFailed(true));
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (failed) return null;
+  return failed ? null : count;
+}
+
+function DeployInfo() {
+  const count = useCommitCount();
 
   return (
-    <div className="mt-3.5 border-t border-black/5 pt-3.5">
-      <div className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">
-        <GitCommitHorizontal size={12} strokeWidth={2.5} /> Latest on GitHub
-      </div>
-      {commit ? (
-        <a
-          href={commit.url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 block text-[12.5px] leading-snug text-stone-600 transition-colors hover:text-stone-800"
-        >
-          <span className="font-medium text-stone-800">{commit.message}</span>
-          <br />
-          <span className="text-stone-500">
-            {commit.sha} · {formatRelativeTime(commit.date)}
-          </span>
-        </a>
-      ) : (
-        <p className="mt-1 text-[12.5px] text-stone-500">Checking…</p>
-      )}
-    </div>
+    <a
+      href={`https://github.com/${REPO}/commits/main`}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-3.5 flex items-center gap-1.5 border-t border-black/5 pt-3.5 text-[12.5px] font-medium text-stone-600 transition-colors hover:text-stone-800"
+    >
+      <GitCommitHorizontal size={13} strokeWidth={2.5} className="flex-none text-stone-400" />
+      {count != null ? `Prelude Workspace - version 0.0.${count}` : 'Checking version…'}
+    </a>
   );
 }
 
