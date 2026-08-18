@@ -117,7 +117,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           </button>
         </div>
 
-        <label className="mt-4 block text-[13px] font-medium text-stone-500">Version name</label>
+        <label className="mt-4 block text-[13px] font-medium text-stone-600">Version name</label>
         <input
           type="text"
           value={label}
@@ -126,7 +126,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
         />
 
-        <label className="mt-3 block text-[13px] font-medium text-stone-500">Description</label>
+        <label className="mt-3 block text-[13px] font-medium text-stone-600">Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -135,7 +135,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           className="mt-1 w-full resize-none rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
         />
 
-        <label className="mt-3 block text-[13px] font-medium text-stone-500">What changed</label>
+        <label className="mt-3 block text-[13px] font-medium text-stone-600">What changed</label>
         <textarea
           value={changelog}
           onChange={(e) => setChangelog(e.target.value)}
@@ -144,7 +144,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           className="mt-1 w-full resize-none rounded-lg bg-black/5 px-3 py-2 text-[14.5px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
         />
 
-        <label className="mt-3 block text-[13px] font-medium text-stone-500">Status</label>
+        <label className="mt-3 block text-[13px] font-medium text-stone-600">Status</label>
         <div className="mt-1 flex items-center gap-1 rounded-lg bg-black/5 p-1">
           {STATUS_OPTIONS.map((opt) => (
             <button
@@ -160,14 +160,14 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
           ))}
         </div>
 
-        <label className="mt-3 block text-[13px] font-medium text-stone-500">
+        <label className="mt-3 block text-[13px] font-medium text-stone-600">
           Prototype asset <span className="text-red-500">*</span>
         </label>
         <input ref={fileInputRef} type="file" accept="image/*,video/*,.html,.htm" className="hidden" onChange={handleFileChange} />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-black/[0.02] px-3 py-2.5 text-left text-[14px] text-stone-500 transition-colors hover:border-stone-400 hover:text-stone-700"
+          className="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-black/[0.02] px-3 py-2.5 text-left text-[14px] text-stone-600 transition-colors hover:border-stone-400 hover:text-stone-800"
         >
           {file ? <FileIcon size={15} strokeWidth={2} /> : <Upload size={15} strokeWidth={2} />}
           {file ? file.name : 'Upload a file'}

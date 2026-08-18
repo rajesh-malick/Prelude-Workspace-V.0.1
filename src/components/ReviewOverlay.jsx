@@ -353,7 +353,7 @@ export default function ReviewOverlay({
             comment={c}
             style={positionFor(c, i)}
             onResolve={readOnly ? undefined : (resolved) => onResolveComment?.(c.id, resolved)}
-            onAddReply={readOnly ? undefined : (text) => onAddReply?.(c.id, text)}
+            onAddReply={readOnly ? undefined : (path, text) => onAddReply?.(c.id, text, path)}
             readOnly={readOnly}
           />
         ))}
@@ -652,7 +652,7 @@ export default function ReviewOverlay({
                     <div className="mt-2 border-t border-black/5 pt-2">
                       <ReplyThread
                         replies={c.replies}
-                        onAddReply={readOnly ? undefined : (text) => onAddReply?.(c.id, text)}
+                        onAddReply={readOnly ? undefined : (path, text) => onAddReply?.(c.id, text, path)}
                         readOnly={readOnly}
                       />
                     </div>

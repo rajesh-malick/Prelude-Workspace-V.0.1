@@ -51,7 +51,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
           </button>
         </div>
 
-        <label className="mt-4 block text-[11.5px] font-medium text-stone-500">Project name</label>
+        <label className="mt-4 block text-[11.5px] font-medium text-stone-600">Project name</label>
         <input
           type="text"
           autoFocus
@@ -61,7 +61,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
           className="mt-1 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-400 focus:bg-black/[0.07]"
         />
 
-        <label className="mt-3 block text-[11.5px] font-medium text-stone-500">Status</label>
+        <label className="mt-3 block text-[11.5px] font-medium text-stone-600">Status</label>
         <div className="mt-1 flex items-center gap-1 rounded-lg bg-black/5 p-1">
           {STATUS_OPTIONS.map((opt) => (
             <button
@@ -77,7 +77,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
           ))}
         </div>
 
-        <label className="mt-3 block text-[11.5px] font-medium text-stone-500">Color</label>
+        <label className="mt-3 block text-[11.5px] font-medium text-stone-600">Color</label>
         <div className="mt-1.5 flex items-center gap-2">
           {COLOR_OPTIONS.map((c) => (
             <button
@@ -94,7 +94,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
           ))}
         </div>
 
-        <p className="mt-4 text-[11px] text-stone-400">
+        <p className="mt-4 text-[11px] text-stone-500">
           A new tree grows for it right away — you'll add its first version next.
         </p>
 

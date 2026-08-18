@@ -29,7 +29,7 @@ export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly
         title={title}
         aria-label={title}
         className={`flex flex-none items-center justify-center rounded-full border ${
-          resolved ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-stone-300 text-transparent'
+          resolved ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-stone-300 text-stone-300'
         }`}
         style={{ width: dim, height: dim }}
       >
@@ -58,6 +58,11 @@ export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly
 
   return (
     <div ref={wrapRef} className="relative flex-none">
+      {/* Was a literally blank circle before — nothing hinted it was
+          clickable at all, let alone that it was the "mark resolved"
+          control. A visible (if muted) check outline reads as a checkbox
+          waiting to be ticked, the same convention as GitHub/Linear/Asana
+          task checkboxes. */}
       <button
         type="button"
         onClick={(e) => {
@@ -66,9 +71,11 @@ export default function ResolveToggle({ resolved, resolvedBy, onChange, readOnly
         }}
         title="Mark as resolved"
         aria-label="Mark as resolved"
-        className="flex items-center justify-center rounded-full border border-stone-300 transition-colors hover:border-stone-400 hover:bg-black/5"
+        className="flex items-center justify-center rounded-full border border-stone-300 text-stone-300 transition-colors hover:border-stone-500 hover:bg-black/5 hover:text-stone-500"
         style={{ width: dim, height: dim }}
-      />
+      >
+        <Check size={iconSize} strokeWidth={3} />
+      </button>
       {confirming && (
         <div
           onClick={(e) => e.stopPropagation()}

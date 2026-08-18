@@ -31,6 +31,16 @@ import { getBloomWorldPosition } from './utils/treeGeometry';
 let nextId = 1000;
 const genId = (prefix) => `${prefix}-${nextId++}`;
 
+// Threaded replies can go arbitrarily deep — `path` is the chain of reply
+// ids from the comment's top-level replies down to whichever reply is
+// being replied to (empty path = replying directly to the comment itself).
+// Walks that chain and appends the new reply at the bottom of it.
+function addReplyAtPath(replies, path, newReply) {
+  if (path.length === 0) return [...replies, newReply];
+  const [headId, ...rest] = path;
+  return replies.map((r) => (r.id === headId ? { ...r, replies: addReplyAtPath(r.replies ?? [], rest, newReply) } : r));
+}
+
 // One-time celebration flags (first project ever planted, first version
 // ever published) — deliberately client-side-only, not a backend field:
 // this is cosmetic flavor, not data worth a schema change for, and the
@@ -658,7 +668,8 @@ export default function App() {
   // redundant control, and doubles as the actual back-and-forth a bare
   // assignee name never captured.
   const handleAddReply = useCallback(
-    (projectId, versionId, commentId, text) => {
+    (projectId, versionId, commentId, text, parentReplyPath = []) => {
+      const newReply = { id: genId('r'), author: userName, text, replies: [] };
       updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
@@ -669,9 +680,7 @@ export default function App() {
               return {
                 ...v,
                 comments: v.comments.map((c) =>
-                  c.id !== commentId
-                    ? c
-                    : { ...c, replies: [...(c.replies ?? []), { id: genId('r'), author: userName, text }] }
+                  c.id !== commentId ? c : { ...c, replies: addReplyAtPath(c.replies ?? [], parentReplyPath, newReply) }
                 ),
               };
             }),
@@ -957,7 +966,9 @@ export default function App() {
                 onResolveComment={(commentId, resolved) =>
                   handleResolveComment(focusedProject.id, focusedVersion.id, commentId, resolved)
                 }
-                onAddReply={(commentId, text) => handleAddReply(focusedProject.id, focusedVersion.id, commentId, text)}
+                onAddReply={(commentId, text, path) =>
+                  handleAddReply(focusedProject.id, focusedVersion.id, commentId, text, path)
+                }
                 readOnly={false}
                 visitingOwnerName={visitingOwnerName}
                 initialFocusCommentId={destination.focusCommentId}
@@ -1024,7 +1035,9 @@ export default function App() {
                 onResolveComment={(commentId, resolved) =>
                   handleResolveComment(focusedProject.id, focusedVersion.id, commentId, resolved)
                 }
-                onAddReply={(commentId, text) => handleAddReply(focusedProject.id, focusedVersion.id, commentId, text)}
+                onAddReply={(commentId, text, path) =>
+                  handleAddReply(focusedProject.id, focusedVersion.id, commentId, text, path)
+                }
                 readOnly={false}
                 visitingOwnerName={visitingOwnerName}
               />

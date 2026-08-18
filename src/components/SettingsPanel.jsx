@@ -1,6 +1,64 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, RotateCcw, MapPin } from 'lucide-react';
+import { LogOut, RotateCcw, MapPin, GitCommitHorizontal } from 'lucide-react';
+import { formatRelativeTime } from '../utils/relativeTime';
+
+const REPO = 'rajesh-malick/Prelude-Workspace-V.0.1';
+
+// Live, not a build-time stamp — fetches whatever is actually on GitHub's
+// main branch right now, so it reflects a direct push to GitHub too (not
+// just deploys that went through the usual build/commit/push flow).
+// Silently hides itself on failure (rate-limited, offline, repo renamed)
+// rather than showing a broken/stale credential-looking error.
+function DeployInfo() {
+  const [commit, setCommit] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`https://api.github.com/repos/${REPO}/commits/main`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (cancelled) return;
+        setCommit({
+          sha: data.sha?.slice(0, 7),
+          message: data.commit?.message?.split('\n')[0],
+          date: data.commit?.author?.date,
+          url: data.html_url,
+        });
+      })
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (failed) return null;
+
+  return (
+    <div className="mt-3.5 border-t border-black/5 pt-3.5">
+      <div className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">
+        <GitCommitHorizontal size={12} strokeWidth={2.5} /> Latest on GitHub
+      </div>
+      {commit ? (
+        <a
+          href={commit.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 block text-[12.5px] leading-snug text-stone-600 transition-colors hover:text-stone-800"
+        >
+          <span className="font-medium text-stone-800">{commit.message}</span>
+          <br />
+          <span className="text-stone-500">
+            {commit.sha} · {formatRelativeTime(commit.date)}
+          </span>
+        </a>
+      ) : (
+        <p className="mt-1 text-[12.5px] text-stone-500">Checking…</p>
+      )}
+    </div>
+  );
+}
 
 // Anchored directly above the gear icon in NavDock, matching wherever the
 // dock currently sits (it shifts left while a Review is open).
@@ -18,13 +76,13 @@ export default function SettingsPanel({ userName, onSignOut, onResetGrove, onClo
       }`}
     >
       <div className="text-[15px] font-semibold text-stone-800">Settings</div>
-      <div className="mt-0.5 text-[13px] text-stone-500">Signed in as {userName}</div>
+      <div className="mt-0.5 text-[13px] text-stone-600">Signed in as {userName}</div>
 
       <div className="mt-3.5 border-t border-black/5 pt-3.5">
-        <div className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-stone-400">
+        <div className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">
           <MapPin size={12} strokeWidth={2.5} /> Collaboration
         </div>
-        <p className="mt-1 text-[12.5px] leading-snug text-stone-500">
+        <p className="mt-1 text-[12.5px] leading-snug text-stone-600">
           Everyone at Zuper can view and edit each other's territory — use the Territory switcher up top to hop
           into a teammate's Grove.
         </p>
@@ -76,17 +134,11 @@ export default function SettingsPanel({ userName, onSignOut, onResetGrove, onClo
         )}
       </div>
 
-      <p className="mt-3.5 border-t border-black/5 pt-3 text-[12px] leading-snug text-stone-400">
+      <p className="mt-3.5 border-t border-black/5 pt-3 text-[12px] leading-snug text-stone-500">
         Your projects are saved to your Zuper account and available wherever you sign in.
       </p>
 
-      <p className="mt-2 text-[11px] leading-snug text-stone-400">
-        Ground grass model: "Grass Patches - Circle" by brandon_grey, via
-        Sketchfab, licensed CC-BY-4.0. Bird and butterfly models: "Simple_Bird"
-        and "BUTTERFLY" (CC-BY-4.0), "Orchard Swallowtail", "Cairn's
-        Birdwing", "Clearwing Swallowtail" and "Ulysses Butterfly"
-        (CC-BY-SA-4.0), via Sketchfab.
-      </p>
+      <DeployInfo />
     </motion.div>
   );
 }

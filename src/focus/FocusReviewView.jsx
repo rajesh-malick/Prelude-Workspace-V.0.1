@@ -300,7 +300,7 @@ export default function FocusReviewView({
                       key={c.id}
                       comment={c}
                       onResolve={readOnly ? undefined : (resolved) => onResolveComment?.(c.id, resolved)}
-                      onAddReply={readOnly ? undefined : (text) => onAddReply?.(c.id, text)}
+                      onAddReply={readOnly ? undefined : (path, text) => onAddReply?.(c.id, text, path)}
                       readOnly={readOnly}
                     />
                   ))}

@@ -107,7 +107,7 @@ export default function Butterfly({ comment, style, onResolve, onAddReply, readO
             <div className="mt-2 border-t border-black/5 pt-2">
               <ReplyThread
                 replies={comment.replies}
-                onAddReply={readOnly ? undefined : (text) => onAddReply?.(text)}
+                onAddReply={readOnly ? undefined : (path, text) => onAddReply?.(path, text)}
                 readOnly={readOnly}
                 compact
               />
