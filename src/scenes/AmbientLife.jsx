@@ -65,36 +65,66 @@ function AnimatedFlyer({ url, targetSize, speed, phaseOffset }) {
   );
 }
 
-// A bird traces a wide, slow circle high over the Grove.
+// A fresh random entry point beyond the treeline, a fresh random exit
+// point, and a random bow/duration for this one pass — rolled again the
+// instant the bird reaches the end, so it's never the same path twice.
+function randomFlight() {
+  const angleIn = Math.random() * Math.PI * 2;
+  const angleOut = Math.random() * Math.PI * 2;
+  const rangeIn = 12 + Math.random() * 8;
+  const rangeOut = 12 + Math.random() * 8;
+  return {
+    start: { x: Math.cos(angleIn) * rangeIn, z: Math.sin(angleIn) * rangeIn, y: 3.8 + Math.random() * 3.5 },
+    end: { x: Math.cos(angleOut) * rangeOut, z: Math.sin(angleOut) * rangeOut, y: 3.8 + Math.random() * 3.5 },
+    bow: (Math.random() - 0.5) * 7,
+    duration: 13 + Math.random() * 11,
+  };
+}
+
+// A bird flies a straight-ish line from one random point beyond the
+// treeline to another, then immediately rolls a brand new random
+// entry/exit pair and does it again — real birds pass through from a
+// different direction each time, they don't loop the same fixed circular
+// track forever.
 function AmbientBird({ seed }) {
   const outerRef = useRef();
-  const p = useMemo(
-    () => ({
-      radius: 7 + hash(seed) * 7,
-      height: 4.2 + hash(seed + 1) * 3,
-      speed: 0.09 + hash(seed + 2) * 0.07,
-      phase: hash(seed + 3) * Math.PI * 2,
-      animSpeed: 0.8 + hash(seed + 4) * 0.6,
-      animPhase: hash(seed + 5) * 2,
-    }),
-    [seed]
-  );
+  const flightRef = useRef(randomFlight());
+  const elapsedRef = useRef(0);
+  const prevPos = useRef(null);
+  // Wingbeat speed/phase stay tied to this bird instance (not re-rolled
+  // per flight) — only the flight path itself needs to vary each pass.
+  const anim = useMemo(() => ({ speed: 0.8 + hash(seed) * 0.6, phase: hash(seed + 1) * 2 }), [seed]);
 
-  useFrame((state) => {
-    const t = state.clock.elapsedTime * p.speed + p.phase;
-    const x = Math.cos(t) * p.radius;
-    const z = Math.sin(t) * p.radius;
-    const y = p.height + Math.sin(t * 2) * 0.4;
+  useFrame((state, delta) => {
+    elapsedRef.current += delta;
+    if (elapsedRef.current > flightRef.current.duration) {
+      flightRef.current = randomFlight();
+      elapsedRef.current = 0;
+      prevPos.current = null;
+    }
+    const f = flightRef.current;
+    const t = elapsedRef.current / f.duration;
+    const x = THREE.MathUtils.lerp(f.start.x, f.end.x, t) + Math.sin(t * Math.PI) * f.bow;
+    const y = THREE.MathUtils.lerp(f.start.y, f.end.y, t) + Math.sin(t * Math.PI * 2) * 0.3;
+    const z = THREE.MathUtils.lerp(f.start.z, f.end.z, t);
     if (outerRef.current) {
+      // Face the actual direction of travel (frame-to-frame delta) rather
+      // than deriving it from the path formula — keeps it correct no
+      // matter how the bow/easing above changes.
+      if (prevPos.current) {
+        const dx = x - prevPos.current.x;
+        const dz = z - prevPos.current.z;
+        if (Math.abs(dx) > 1e-5 || Math.abs(dz) > 1e-5) outerRef.current.rotation.y = Math.atan2(dx, dz);
+      }
       outerRef.current.position.set(x, y, z);
-      outerRef.current.rotation.y = -t + Math.PI / 2;
+      prevPos.current = { x, y, z };
     }
   });
 
   return (
     <group ref={outerRef}>
       <Suspense fallback={null}>
-        <AnimatedFlyer url={BIRD_MODEL_URL} targetSize={0.22} speed={p.animSpeed} phaseOffset={p.animPhase} />
+        <AnimatedFlyer url={BIRD_MODEL_URL} targetSize={0.22} speed={anim.speed} phaseOffset={anim.phase} />
       </Suspense>
     </group>
   );
