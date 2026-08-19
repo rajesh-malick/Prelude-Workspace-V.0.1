@@ -422,7 +422,7 @@ export default function App() {
   // switching back to Grove doesn't pay the cost of recreating the WebGL
   // context and reloading the whole scene from scratch every time —
   // frameloop + visibility just pause and hide it instead.
-  const groveHidden = mode !== 'grove' || (arrived && destination?.kind === 'bloom');
+  const groveHidden = mode !== 'grove' || (arrived && destination?.kind === 'bloom') || villageOpen;
 
   const focus = useMemo(() => {
     if (!destination) return null;
