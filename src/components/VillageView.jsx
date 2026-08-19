@@ -1,10 +1,56 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { avatarColor } from '../utils/avatarColor';
 import { getTreeGeometry } from '../utils/treeGeometry';
+
+const PLOT_RADIUS = 1.3;
+const PLOT_COLOR = '#C7A76B';
+const PLOT_BORDER_COLOR = '#9C7B45';
+const PATH_COLOR = '#D9CBA3';
+const PATH_WIDTH = 0.45;
+
+// A raised, bordered patch of ground under each tree — the reference
+// screenshots (Cities: Skylines, Clash of Clans) both read as a set of
+// distinct owned parcels connected by paths, not objects scattered loose
+// on one continuous field. Two stacked cylinders (a slightly larger dark
+// "border" under a smaller light "soil" disc) gets that in two meshes.
+function Plot({ position }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.02, 0]} receiveShadow>
+        <cylinderGeometry args={[PLOT_RADIUS, PLOT_RADIUS, 0.06, 24]} />
+        <meshStandardMaterial color={PLOT_BORDER_COLOR} />
+      </mesh>
+      <mesh position={[0, 0.06, 0]} receiveShadow>
+        <cylinderGeometry args={[PLOT_RADIUS - 0.16, PLOT_RADIUS - 0.16, 0.06, 24]} />
+        <meshStandardMaterial color={PLOT_COLOR} />
+      </mesh>
+    </group>
+  );
+}
+
+// Grid-adjacent plots only ever connect straight along X or straight along
+// Z (never diagonal) — using an axis-aligned box sized along whichever axis
+// is "long" sidesteps needing rotation math entirely, so there's no
+// rotation-sign guesswork to get right without being able to preview it.
+function PathSegment({ from, to }) {
+  const dx = to[0] - from[0];
+  const dz = to[2] - from[2];
+  const midX = (from[0] + to[0]) / 2;
+  const midZ = (from[2] + to[2]) / 2;
+  const horizontal = Math.abs(dx) > Math.abs(dz);
+  const length = horizontal ? Math.abs(dx) : Math.abs(dz);
+  const size = horizontal ? [length, 0.04, PATH_WIDTH] : [PATH_WIDTH, 0.04, length];
+  return (
+    <mesh position={[midX, 0.03, midZ]} receiveShadow>
+      <boxGeometry args={size} />
+      <meshStandardMaterial color={PATH_COLOR} />
+    </mesh>
+  );
+}
 
 // One simplified tree per PERSON, not one full detailed tree per PROJECT —
 // rendering everyone's actual Grove (every project, every branch, every
@@ -24,42 +70,44 @@ function VillageTree({ person, position, onVisit }) {
   const color = avatarColor(person.ownerName);
 
   return (
-    <group
-      position={position}
-      scale={hovered ? 1.08 : 1}
-      onClick={(e) => {
-        e.stopPropagation();
-        onVisit(person.ownerEmail);
-      }}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        setHovered(true);
-        document.body.style.cursor = 'pointer';
-      }}
-      onPointerOut={(e) => {
-        e.stopPropagation();
-        setHovered(false);
-        document.body.style.cursor = 'auto';
-      }}
-    >
-      <mesh position={[0, geometry.trunkHeight / 2, 0]} castShadow>
-        <cylinderGeometry args={[0.07, 0.12, geometry.trunkHeight, 6]} />
-        <meshStandardMaterial color="#7A5C3E" />
-      </mesh>
-      {geometry.branches.map((b, i) => (
-        <mesh key={i} position={b.tip} castShadow>
-          <icosahedronGeometry args={[0.32 + (i % 3) * 0.04, 0]} />
-          <meshStandardMaterial color={color.fg} />
+    <group position={position}>
+      <Plot position={[0, 0, 0]} />
+      <group
+        scale={hovered ? 1.08 : 1}
+        onClick={(e) => {
+          e.stopPropagation();
+          onVisit(person.ownerEmail);
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+          document.body.style.cursor = 'auto';
+        }}
+      >
+        <mesh position={[0, geometry.trunkHeight / 2 + 0.09, 0]} castShadow>
+          <cylinderGeometry args={[0.07, 0.12, geometry.trunkHeight, 6]} />
+          <meshStandardMaterial color="#7A5C3E" />
         </mesh>
-      ))}
-      <Html position={[0, geometry.trunkHeight + 1.1, 0]} center distanceFactor={11} occlude>
-        <div className="pointer-events-none whitespace-nowrap rounded-full bg-stone-900/85 px-2.5 py-1 text-[11px] font-medium text-white">
-          {person.isMine ? 'My Grove' : person.ownerName}
-          <span className="ml-1 text-stone-300">
-            · {person.projectCount} {person.projectCount === 1 ? 'project' : 'projects'}
-          </span>
-        </div>
-      </Html>
+        {geometry.branches.map((b, i) => (
+          <mesh key={i} position={[b.tip[0], b.tip[1] + 0.09, b.tip[2]]} castShadow>
+            <icosahedronGeometry args={[0.32 + (i % 3) * 0.04, 0]} />
+            <meshStandardMaterial color={color.fg} />
+          </mesh>
+        ))}
+        <Html position={[0, geometry.trunkHeight + 1.2, 0]} center distanceFactor={11} occlude>
+          <div className="pointer-events-none whitespace-nowrap rounded-full bg-stone-900/85 px-2.5 py-1 text-[11px] font-medium text-white">
+            {person.isMine ? 'My Grove' : person.ownerName}
+            <span className="ml-1 text-stone-300">
+              · {person.projectCount} {person.projectCount === 1 ? 'project' : 'projects'}
+            </span>
+          </div>
+        </Html>
+      </group>
     </group>
   );
 }
@@ -67,38 +115,51 @@ function VillageTree({ person, position, onVisit }) {
 function VillageScene({ people, onVisit }) {
   const cols = Math.ceil(Math.sqrt(people.length));
   const spacing = 3.4;
+  const offset = ((cols - 1) * spacing) / 2;
   const groundRadius = Math.max(10, cols * spacing * 0.75 + 4);
+
+  const positions = people.map((_, i) => {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    return [col * spacing - offset, 0, row * spacing - offset];
+  });
+
+  // A path to every grid-adjacent neighbor (right and below) — enough to
+  // read as a connected village rather than a co-ordinate dump of trees.
+  const paths = [];
+  positions.forEach((pos, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const rightIndex = row * cols + (col + 1);
+    if (col + 1 < cols && rightIndex < positions.length) paths.push([pos, positions[rightIndex]]);
+    const belowIndex = (row + 1) * cols + col;
+    if (belowIndex < positions.length) paths.push([pos, positions[belowIndex]]);
+  });
 
   return (
     <>
       <hemisphereLight args={['#FDF6EC', '#DDD0A8', 0.65]} />
-      <directionalLight position={[6, 10, 4]} intensity={1} color="#FFEBC4" castShadow />
-      <fog attach="fog" args={['#F3E9D8', 14, groundRadius * 2.2]} />
+      <directionalLight position={[6, 12, 5]} intensity={1} color="#FFEBC4" castShadow />
+      <fog attach="fog" args={['#F3E9D8', 16, groundRadius * 2.4]} />
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[groundRadius, 48]} />
-        <meshStandardMaterial color="#DDD0A8" roughness={1} />
+        <meshStandardMaterial color="#B8C98A" roughness={1} />
       </mesh>
 
-      {people.map((person, i) => {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        const offset = ((cols - 1) * spacing) / 2;
-        return (
-          <VillageTree
-            key={person.ownerEmail ?? 'mine'}
-            person={person}
-            position={[col * spacing - offset, 0, row * spacing - offset]}
-            onVisit={onVisit}
-          />
-        );
-      })}
+      {paths.map(([from, to], i) => (
+        <PathSegment key={i} from={from} to={to} />
+      ))}
+
+      {people.map((person, i) => (
+        <VillageTree key={person.ownerEmail ?? 'mine'} person={person} position={positions[i]} onVisit={onVisit} />
+      ))}
 
       <OrbitControls
         target={[0, 1, 0]}
         minDistance={6}
-        maxDistance={Math.max(24, groundRadius * 1.4)}
-        maxPolarAngle={Math.PI / 2.1}
+        maxDistance={Math.max(26, groundRadius * 1.4)}
+        maxPolarAngle={Math.PI / 2.6}
       />
     </>
   );
@@ -111,6 +172,9 @@ function VillageScene({ people, onVisit }) {
 // occasionally, not flipped back and forth every few seconds the way
 // Grove/Focus mode is, so a small one-time mount cost here isn't worth
 // entangling with that canvas's careful always-mounted/frameloop logic.
+// Camera is steep/narrow-FOV on purpose — an isometric-feeling aerial
+// angle (per the Cities: Skylines / Clash of Clans references) rather
+// than the shallower establishing-shot angle the main Grove uses.
 export default function VillageView({ userName, ownProjectCount, territories, onVisit, onClose }) {
   const people = useMemo(
     () => [{ ownerName: userName, ownerEmail: null, projectCount: ownProjectCount, isMine: true }, ...(territories ?? [])],
@@ -125,7 +189,7 @@ export default function VillageView({ userName, ownProjectCount, territories, on
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-40 bg-[#F3E9D8]"
     >
-      <Canvas shadows camera={{ position: [0, 9, 12], fov: 45 }}>
+      <Canvas shadows camera={{ position: [0, 14, 8], fov: 38 }}>
         <VillageScene people={people} onVisit={onVisit} />
       </Canvas>
 
