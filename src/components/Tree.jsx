@@ -6,6 +6,7 @@ import HoverPanel from './HoverPanel';
 import BloomPopup from './BloomPopup';
 import GerminationSpline, { GERMINATION_SCENE_URL, GERMINATION_SCENE_DURATION } from './GerminationSpline';
 import { getTreeGeometry } from '../utils/treeGeometry';
+import { isWithering } from '../utils/staleness';
 
 // Visual constants only — a "tree" is the visual treatment for a project,
 // a "branch" fans out from the trunk, a "bloom" is the visual treatment
@@ -13,6 +14,10 @@ import { getTreeGeometry } from '../utils/treeGeometry';
 const TRUNK_COLOR = '#7A5C3E';
 const BRANCH_COLOR = '#8B6B47';
 const LEAF_COLORS = ['#6B8F47', '#7FA050', '#5C7D3D', '#8AA85C'];
+// Nobody's grown a new version here in a while — dry, autumnal tones
+// instead of green, the same "state you can see without clicking in"
+// idea as a dimmed, still butterfly for a resolved comment.
+const WITHERED_LEAF_COLORS = ['#B8934A', '#A87B3D', '#C2A25C', '#8F6B3A'];
 const UP = new THREE.Vector3(0, 1, 0);
 
 const GROWTH_DURATION = 1.1;
@@ -52,6 +57,8 @@ export default function Tree({
     () => getTreeGeometry(project),
     [project]
   );
+  const withering = isWithering(project);
+  const leafPalette = withering ? WITHERED_LEAF_COLORS : LEAF_COLORS;
 
   // Scatter small leaf blobs around every branch tip to form a canopy.
   // Bloom positions sit further out (see treeGeometry.js) so they poke
@@ -83,12 +90,12 @@ export default function Tree({
         list.push({
           position,
           scale: 0.16 + h(seed + 3) * 0.1,
-          color: LEAF_COLORS[Math.floor(h(seed + 4) * LEAF_COLORS.length)],
+          color: leafPalette[Math.floor(h(seed + 4) * leafPalette.length)],
         });
       }
     });
     return list;
-  }, [branches, idSeed, bloomLocalPositions]);
+  }, [branches, idSeed, bloomLocalPositions, leafPalette]);
 
   const topY = Math.max(trunkHeight, ...branches.map((b) => b.tip[1]));
 

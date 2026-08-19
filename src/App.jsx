@@ -765,6 +765,11 @@ export default function App() {
             status: payload.status,
             owner: userName,
             createdAt: 'Just now',
+            // Real, sortable timestamp — `createdAt` above stays a fixed
+            // display string (existing behavior for versions already
+            // shown elsewhere), but "how long ago" for staleness/withering
+            // needs actual math to do, not a frozen label.
+            createdAtISO: new Date().toISOString(),
             comments: [],
           };
           if (payload.description) version.description = payload.description;
