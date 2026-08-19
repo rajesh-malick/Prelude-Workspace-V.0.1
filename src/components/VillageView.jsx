@@ -94,7 +94,9 @@ function scatterOffsets(count, seedBase) {
 
 function PersonPlot({ person, position, onVisit }) {
   const [anyHovered, setAnyHovered] = useState(false);
-  const color = avatarColor(person.ownerName);
+  // A personal accent color (see EditProfileModal) overrides the default
+  // name-hash-derived one, once someone's actually set one.
+  const treeColor = person.villageColor || avatarColor(person.ownerName).fg;
   const names = person.projectNames ?? [];
   const offsets = useMemo(() => scatterOffsets(Math.max(names.length, 1), names.length + person.ownerName.length), [names.length, person.ownerName]);
   // Smaller per tree the more of them share one plot, so a person with a
@@ -109,7 +111,7 @@ function PersonPlot({ person, position, onVisit }) {
           className={`pointer-events-none whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold text-white transition-opacity ${
             anyHovered ? 'opacity-100' : 'opacity-90'
           }`}
-          style={{ backgroundColor: color.fg }}
+          style={{ backgroundColor: treeColor }}
         >
           {person.isMine ? 'My Grove' : person.ownerName}
         </div>
@@ -126,7 +128,7 @@ function PersonPlot({ person, position, onVisit }) {
             name={name}
             offset={offsets[i]}
             scale={scale}
-            color={color.fg}
+            color={treeColor}
             onClick={() => onVisit(person.ownerEmail)}
             onHoverChange={setAnyHovered}
           />
@@ -191,10 +193,13 @@ function VillageScene({ people, onVisit }) {
 // an isometric-feeling aerial angle (per the Cities: Skylines / Clash of
 // Clans references) rather than the shallower establishing-shot angle the
 // main Grove uses.
-export default function VillageView({ userName, ownProjectNames, territories, onVisit, onClose }) {
+export default function VillageView({ userName, ownProjectNames, ownVillageColor, territories, onVisit, onClose }) {
   const people = useMemo(
-    () => [{ ownerName: userName, ownerEmail: null, projectNames: ownProjectNames ?? [], isMine: true }, ...(territories ?? [])],
-    [userName, ownProjectNames, territories]
+    () => [
+      { ownerName: userName, ownerEmail: null, projectNames: ownProjectNames ?? [], villageColor: ownVillageColor, isMine: true },
+      ...(territories ?? []),
+    ],
+    [userName, ownProjectNames, ownVillageColor, territories]
   );
 
   return (

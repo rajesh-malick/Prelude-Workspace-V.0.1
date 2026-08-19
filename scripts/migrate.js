@@ -37,7 +37,22 @@ async function migrate() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications JSONB NOT NULL DEFAULT '[]'::jsonb
   `;
-  console.log('Migration complete: users table (with projects_data, access_grants, notifications) is ready.');
+  // Profile extras — a short bio, an optional avatar (stored as a data
+  // URL, same "no separate blob storage" tradeoff already made for
+  // version assets — fine at this scale, not meant to hold huge images),
+  // and a personal accent color for how their tree renders in the Village
+  // overview, overriding the default name-hash-derived color from
+  // avatarColor() when set.
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT ''
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS village_color TEXT
+  `;
+  console.log('Migration complete: users table (with projects_data, access_grants, notifications, bio, avatar_url, village_color) is ready.');
 }
 
 migrate().catch((err) => {

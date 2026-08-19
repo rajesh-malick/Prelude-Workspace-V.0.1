@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, RotateCcw, MapPin, GitCommitHorizontal } from 'lucide-react';
+import { LogOut, RotateCcw, MapPin, GitCommitHorizontal, UserCog } from 'lucide-react';
+import Avatar from './Avatar';
 
 const REPO = 'rajesh-malick/Prelude-Workspace-V.0.1';
 
@@ -53,7 +54,7 @@ function DeployInfo() {
 
 // Anchored directly above the gear icon in NavDock, matching wherever the
 // dock currently sits (it shifts left while a Review is open).
-export default function SettingsPanel({ userName, onSignOut, onResetGrove, onClose, anchorLeft }) {
+export default function SettingsPanel({ userName, avatarUrl, onEditProfile, onSignOut, onResetGrove, onClose, anchorLeft }) {
   const [confirmingReset, setConfirmingReset] = useState(false);
 
   return (
@@ -66,8 +67,26 @@ export default function SettingsPanel({ userName, onSignOut, onResetGrove, onClo
         anchorLeft ? 'left-6' : 'left-1/2 -translate-x-1/2'
       }`}
     >
-      <div className="text-[15px] font-semibold text-stone-800">Settings</div>
-      <div className="mt-0.5 text-[13px] text-stone-600">Signed in as {userName}</div>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[15px] font-semibold text-stone-800">Settings</div>
+          <div className="mt-0.5 text-[13px] text-stone-600">Signed in as {userName}</div>
+        </div>
+        <Avatar name={userName} avatarUrl={avatarUrl} size={36} />
+      </div>
+
+      {onEditProfile && (
+        <button
+          type="button"
+          onClick={() => {
+            onEditProfile();
+            onClose?.();
+          }}
+          className="mt-3 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[14px] font-medium text-stone-700 transition-colors hover:bg-black/5"
+        >
+          <UserCog size={15} strokeWidth={2} /> Edit profile
+        </button>
+      )}
 
       <div className="mt-3.5 border-t border-black/5 pt-3.5">
         <div className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-stone-600">

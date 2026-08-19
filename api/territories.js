@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     // projects_data = NULL, not an empty array; the outer COALESCE covers
     // jsonb_agg itself returning NULL when there are zero rows to aggregate.
     const rows = await sql`
-      SELECT u.name, u.email,
+      SELECT u.name, u.email, u.avatar_url, u.village_color,
         COALESCE(
           (SELECT jsonb_agg(p->>'name') FROM jsonb_array_elements(COALESCE(u.projects_data, '[]'::jsonb)) p),
           '[]'::jsonb
@@ -27,7 +27,13 @@ export default async function handler(req, res) {
       FROM users u WHERE u.email != ${user.email} ORDER BY u.name
     `;
     return res.status(200).json({
-      territories: rows.map((r) => ({ ownerName: r.name, ownerEmail: r.email, projectNames: r.project_names ?? [] })),
+      territories: rows.map((r) => ({
+        ownerName: r.name,
+        ownerEmail: r.email,
+        projectNames: r.project_names ?? [],
+        avatarUrl: r.avatar_url,
+        villageColor: r.village_color,
+      })),
     });
   } catch (err) {
     console.error('GET /api/territories error', err);

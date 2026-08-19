@@ -22,6 +22,7 @@ import WelcomeToast from './components/WelcomeToast';
 import CelebrationToast from './components/CelebrationToast';
 import NotificationsPanel from './components/NotificationsPanel';
 import SettingsPanel from './components/SettingsPanel';
+import EditProfileModal from './components/EditProfileModal';
 import VillageView from './components/VillageView';
 import FocusDashboard from './focus/FocusDashboard';
 import FocusProjectView from './focus/FocusProjectView';
@@ -129,6 +130,23 @@ async function fetchNotifications() {
   if (!res.ok) return [];
   const data = await res.json();
   return Array.isArray(data.notifications) ? data.notifications : [];
+}
+
+async function fetchProfile() {
+  const res = await fetch('/api/profile', { credentials: 'include' });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function saveProfile(payload) {
+  const res = await fetch('/api/profile', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return { error: (await res.json().catch(() => ({}))).error ?? 'Could not save your profile.' };
+  return res.json();
 }
 
 // Fire-and-forget — a failed delivery (network hiccup, recipient deleted
@@ -276,6 +294,11 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [villageOpen, setVillageOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  // Bio/avatar/village color — everything else about "who am I" (name,
+  // email) already lives on `session`.
+  const [profile, setProfile] = useState({ bio: '', avatarUrl: null, villageColor: null });
+  const [profileLoadedFor, setProfileLoadedFor] = useState(null);
   const [soundOn, setSoundOn] = useState(true);
   // An email, or null for "my own Grove" — every other account at the
   // company is a real, browsable territory (see /api/territories), not a
@@ -307,6 +330,19 @@ export default function App() {
   // birds themselves, see GroveScene/AmbientLife below) pause overnight
   // instead of playing on a loop regardless of the Grove's own lighting.
   useAmbientChirps(soundOn && mode === 'grove' && !isNight);
+
+  useEffect(() => {
+    if (!session?.email || profileLoadedFor === session.email) return;
+    let cancelled = false;
+    fetchProfile().then((loaded) => {
+      if (cancelled || !loaded) return;
+      setProfile({ bio: loaded.bio ?? '', avatarUrl: loaded.avatarUrl ?? null, villageColor: loaded.villageColor ?? null });
+      setProfileLoadedFor(session.email);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, profileLoadedFor]);
 
   useEffect(() => {
     if (!session?.email || territoriesLoadedFor === session.email) return;
@@ -470,6 +506,21 @@ export default function App() {
     setSession(user);
     if (isNewUser) setShowWelcome(true);
   }, []);
+
+  // The API re-issues the session cookie itself when the name changes
+  // (see api/profile.js) — this just updates local state to match so the
+  // rest of the app, which reads the name from `session` rather than
+  // re-fetching, sees it immediately without needing to sign in again.
+  const handleSaveProfile = useCallback(
+    async (payload) => {
+      const result = await saveProfile(payload);
+      if (result.error) return;
+      setSession((prev) => (prev ? { ...prev, name: result.name } : prev));
+      setProfile({ bio: result.bio ?? '', avatarUrl: result.avatarUrl ?? null, villageColor: result.villageColor ?? null });
+      setEditingProfile(false);
+    },
+    []
+  );
 
   const handleSignOut = useCallback(() => {
     fetch('/api/auth/signout', { method: 'POST', credentials: 'include' }).catch(() => {
@@ -1161,10 +1212,25 @@ export default function App() {
         {settingsOpen && (
           <SettingsPanel
             userName={userName}
+            avatarUrl={profile.avatarUrl}
+            onEditProfile={() => setEditingProfile(true)}
             onSignOut={handleSignOut}
             onResetGrove={handleResetGrove}
             onClose={() => setSettingsOpen(false)}
             anchorLeft={destination?.kind === 'bloom'}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingProfile && (
+          <EditProfileModal
+            name={userName}
+            bio={profile.bio}
+            avatarUrl={profile.avatarUrl}
+            villageColor={profile.villageColor}
+            onSave={handleSaveProfile}
+            onClose={() => setEditingProfile(false)}
           />
         )}
       </AnimatePresence>
@@ -1176,6 +1242,7 @@ export default function App() {
           <VillageView
             userName={userName}
             ownProjectNames={projects.map((p) => p.name)}
+            ownVillageColor={profile.villageColor}
             territories={territories}
             onVisit={(email) => {
               handleChangeTerritory(email);
