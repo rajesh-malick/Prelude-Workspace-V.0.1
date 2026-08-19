@@ -4,28 +4,28 @@ import { OrbitControls, Html } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { avatarColor } from '../utils/avatarColor';
-import { getTreeGeometry } from '../utils/treeGeometry';
+import { getTreeGeometry, hash } from '../utils/treeGeometry';
 
-const PLOT_RADIUS = 1.3;
+const PLOT_RADIUS = 1.55;
 const PLOT_COLOR = '#C7A76B';
 const PLOT_BORDER_COLOR = '#9C7B45';
 const PATH_COLOR = '#D9CBA3';
 const PATH_WIDTH = 0.45;
+const SPACING = 4.1;
 
-// A raised, bordered patch of ground under each tree — the reference
-// screenshots (Cities: Skylines, Clash of Clans) both read as a set of
-// distinct owned parcels connected by paths, not objects scattered loose
-// on one continuous field. Two stacked cylinders (a slightly larger dark
-// "border" under a smaller light "soil" disc) gets that in two meshes.
-function Plot({ position }) {
+// A raised, bordered patch of ground under each person's cluster — the
+// reference screenshots (Cities: Skylines, Clash of Clans) both read as a
+// set of distinct owned parcels connected by paths, not objects scattered
+// loose on one continuous field.
+function Plot() {
   return (
-    <group position={position}>
+    <group>
       <mesh position={[0, 0.02, 0]} receiveShadow>
         <cylinderGeometry args={[PLOT_RADIUS, PLOT_RADIUS, 0.06, 24]} />
         <meshStandardMaterial color={PLOT_BORDER_COLOR} />
       </mesh>
       <mesh position={[0, 0.06, 0]} receiveShadow>
-        <cylinderGeometry args={[PLOT_RADIUS - 0.16, PLOT_RADIUS - 0.16, 0.06, 24]} />
+        <cylinderGeometry args={[PLOT_RADIUS - 0.18, PLOT_RADIUS - 0.18, 0.06, 24]} />
         <meshStandardMaterial color={PLOT_COLOR} />
       </mesh>
     </group>
@@ -33,9 +33,9 @@ function Plot({ position }) {
 }
 
 // Grid-adjacent plots only ever connect straight along X or straight along
-// Z (never diagonal) — using an axis-aligned box sized along whichever axis
-// is "long" sidesteps needing rotation math entirely, so there's no
-// rotation-sign guesswork to get right without being able to preview it.
+// Z (never diagonal) — an axis-aligned box sized along whichever axis is
+// "long" sidesteps needing rotation math (and its sign-convention
+// guesswork) entirely.
 function PathSegment({ from, to }) {
   const dx = to[0] - from[0];
   const dz = to[2] - from[2];
@@ -52,80 +52,126 @@ function PathSegment({ from, to }) {
   );
 }
 
-// One simplified tree per PERSON, not one full detailed tree per PROJECT —
-// rendering everyone's actual Grove (every project, every branch, every
-// leaf, the GLTF birds/butterflies) simultaneously in one scene is exactly
-// the GPU-contention problem this app already fought hard to fix elsewhere
-// (see the frameloop-pausing work on the main Grove canvas). A trunk plus
-// a handful of canopy blobs per person keeps the real cost at "one cheap
-// tree per teammate" regardless of how many projects they each have —
-// getTreeGeometry still drives the shape/scale from their real project
-// count, just reused as a stylized marker instead of the full render.
-function VillageTree({ person, position, onVisit }) {
+// One small tree per real project rather than one aggregate tree per
+// person — each still built from the same cheap trunk + a few canopy
+// blobs as before (see the module comment below for why that stays cheap
+// even multiplied out this way). Shape/scale comes from the project's own
+// name (deterministic, so it doesn't reshuffle on every render), not a
+// fetched version count — the directory endpoint intentionally only ships
+// names, not each project's full contents.
+function MiniProjectTree({ name, offset, scale, color, onClick, onHoverChange }) {
   const [hovered, setHovered] = useState(false);
-  const geometry = useMemo(
-    () => getTreeGeometry({ id: person.ownerEmail ?? 'mine', versions: Array.from({ length: Math.max(person.projectCount, 1) }) }),
-    [person]
+  const geometry = useMemo(() => getTreeGeometry({ id: name, versions: [{}] }), [name]);
+
+  return (
+    <group
+      position={[offset[0], 0, offset[1]]}
+      scale={hovered ? scale * 1.12 : scale}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        onHoverChange?.(true);
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation();
+        setHovered(false);
+        onHoverChange?.(false);
+      }}
+    >
+      <mesh position={[0, geometry.trunkHeight / 2, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.12, geometry.trunkHeight, 6]} />
+        <meshStandardMaterial color="#7A5C3E" />
+      </mesh>
+      {geometry.branches.map((b, i) => (
+        <mesh key={i} position={b.tip} castShadow>
+          <icosahedronGeometry args={[0.32 + (i % 3) * 0.04, 0]} />
+          <meshStandardMaterial color={color} />
+        </mesh>
+      ))}
+      <Html position={[0, geometry.trunkHeight + 0.7, 0]} center distanceFactor={9} occlude>
+        <div className="pointer-events-none whitespace-nowrap rounded-full bg-stone-900/80 px-2 py-0.5 text-[9.5px] font-medium text-white">
+          {name}
+        </div>
+      </Html>
+    </group>
   );
+}
+
+// Deterministic hash-jittered ring layout — organic-looking without being
+// random-every-render. A single project sits dead center (matches how a
+// lone tree looked before this became a cluster); more than one fans out.
+function scatterOffsets(count, seedBase) {
+  if (count <= 1) return [[0, 0]];
+  const usableRadius = PLOT_RADIUS - 0.55;
+  return Array.from({ length: count }, (_, i) => {
+    const seed = seedBase + i * 29;
+    const angle = (i / count) * Math.PI * 2 + hash(seed) * 0.5;
+    const r = usableRadius * (0.4 + hash(seed + 1) * 0.55);
+    return [Math.cos(angle) * r, Math.sin(angle) * r];
+  });
+}
+
+function PersonPlot({ person, position, onVisit }) {
+  const [anyHovered, setAnyHovered] = useState(false);
   const color = avatarColor(person.ownerName);
+  const names = person.projectNames ?? [];
+  const offsets = useMemo(() => scatterOffsets(Math.max(names.length, 1), names.length + person.ownerName.length), [names.length, person.ownerName]);
+  // Smaller per tree the more of them share one plot, so a person with a
+  // lot of projects doesn't spill outside their own parcel.
+  const scale = Math.max(0.32, 0.58 - names.length * 0.025);
 
   return (
     <group position={position}>
-      <Plot position={[0, 0, 0]} />
-      <group
-        scale={hovered ? 1.08 : 1}
-        onClick={(e) => {
-          e.stopPropagation();
-          onVisit(person.ownerEmail);
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          setHovered(true);
-          document.body.style.cursor = 'pointer';
-        }}
-        onPointerOut={(e) => {
-          e.stopPropagation();
-          setHovered(false);
-          document.body.style.cursor = 'auto';
-        }}
-      >
-        <mesh position={[0, geometry.trunkHeight / 2 + 0.09, 0]} castShadow>
-          <cylinderGeometry args={[0.07, 0.12, geometry.trunkHeight, 6]} />
-          <meshStandardMaterial color="#7A5C3E" />
+      <Plot />
+      <Html position={[0, 2.1, 0]} center distanceFactor={11} occlude>
+        <div
+          className={`pointer-events-none whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold text-white transition-opacity ${
+            anyHovered ? 'opacity-100' : 'opacity-90'
+          }`}
+          style={{ backgroundColor: color.fg }}
+        >
+          {person.isMine ? 'My Grove' : person.ownerName}
+        </div>
+      </Html>
+      {names.length === 0 ? (
+        <mesh position={[0, 0.14, 0]} onClick={() => onVisit(person.ownerEmail)}>
+          <coneGeometry args={[0.16, 0.32, 8]} />
+          <meshStandardMaterial color="#B8C98A" />
         </mesh>
-        {geometry.branches.map((b, i) => (
-          <mesh key={i} position={[b.tip[0], b.tip[1] + 0.09, b.tip[2]]} castShadow>
-            <icosahedronGeometry args={[0.32 + (i % 3) * 0.04, 0]} />
-            <meshStandardMaterial color={color.fg} />
-          </mesh>
-        ))}
-        <Html position={[0, geometry.trunkHeight + 1.2, 0]} center distanceFactor={11} occlude>
-          <div className="pointer-events-none whitespace-nowrap rounded-full bg-stone-900/85 px-2.5 py-1 text-[11px] font-medium text-white">
-            {person.isMine ? 'My Grove' : person.ownerName}
-            <span className="ml-1 text-stone-300">
-              · {person.projectCount} {person.projectCount === 1 ? 'project' : 'projects'}
-            </span>
-          </div>
-        </Html>
-      </group>
+      ) : (
+        names.map((name, i) => (
+          <MiniProjectTree
+            key={name + i}
+            name={name}
+            offset={offsets[i]}
+            scale={scale}
+            color={color.fg}
+            onClick={() => onVisit(person.ownerEmail)}
+            onHoverChange={setAnyHovered}
+          />
+        ))
+      )}
     </group>
   );
 }
 
 function VillageScene({ people, onVisit }) {
   const cols = Math.ceil(Math.sqrt(people.length));
-  const spacing = 3.4;
-  const offset = ((cols - 1) * spacing) / 2;
-  const groundRadius = Math.max(10, cols * spacing * 0.75 + 4);
+  const offset = ((cols - 1) * SPACING) / 2;
+  const groundRadius = Math.max(11, cols * SPACING * 0.75 + 4);
 
   const positions = people.map((_, i) => {
     const row = Math.floor(i / cols);
     const col = i % cols;
-    return [col * spacing - offset, 0, row * spacing - offset];
+    return [col * SPACING - offset, 0, row * SPACING - offset];
   });
 
   // A path to every grid-adjacent neighbor (right and below) — enough to
-  // read as a connected village rather than a co-ordinate dump of trees.
+  // read as a connected village rather than a co-ordinate dump of plots.
   const paths = [];
   positions.forEach((pos, i) => {
     const col = i % cols;
@@ -152,33 +198,42 @@ function VillageScene({ people, onVisit }) {
       ))}
 
       {people.map((person, i) => (
-        <VillageTree key={person.ownerEmail ?? 'mine'} person={person} position={positions[i]} onVisit={onVisit} />
+        <PersonPlot key={person.ownerEmail ?? 'mine'} person={person} position={positions[i]} onVisit={onVisit} />
       ))}
 
       <OrbitControls
         target={[0, 1, 0]}
         minDistance={6}
-        maxDistance={Math.max(26, groundRadius * 1.4)}
+        maxDistance={Math.max(28, groundRadius * 1.4)}
         maxPolarAngle={Math.PI / 2.6}
       />
     </>
   );
 }
 
-// A single overview of the whole company's Groves at once — real 3D (see
-// VillageTree above for why it stays cheap), a door into each person's
-// actual detailed Grove rather than a render of it. Its own fresh Canvas
-// rather than sharing the main Grove's persistent one — this is opened
-// occasionally, not flipped back and forth every few seconds the way
-// Grove/Focus mode is, so a small one-time mount cost here isn't worth
-// entangling with that canvas's careful always-mounted/frameloop logic.
-// Camera is steep/narrow-FOV on purpose — an isometric-feeling aerial
-// angle (per the Cities: Skylines / Clash of Clans references) rather
-// than the shallower establishing-shot angle the main Grove uses.
-export default function VillageView({ userName, ownProjectCount, territories, onVisit, onClose }) {
+// A single overview of the whole company's Groves at once — real 3D, a
+// door into each person's actual detailed Grove rather than a render of
+// it. Deliberately still simplified trees (no branches-with-leaf-scatter,
+// no GLTF birds/butterflies, no hover popups/bloom system) even though
+// there's now one per PROJECT instead of one per person — rendering
+// everyone's full detailed Grove simultaneously is the exact
+// GPU-contention problem this app already fought to fix elsewhere (see
+// the frameloop-pausing work on the main Grove canvas); many cheap
+// trunk-plus-a-few-blobs trees stays fine at this scale, full Tree.jsx
+// instances multiplied across every project of every teammate would not.
+//
+// Its own fresh Canvas rather than sharing the main Grove's persistent
+// one — this is opened occasionally, not flipped back and forth every few
+// seconds the way Grove/Focus mode is, so a small one-time mount cost
+// here isn't worth entangling with that canvas's careful
+// always-mounted/frameloop logic. Camera is steep/narrow-FOV on purpose —
+// an isometric-feeling aerial angle (per the Cities: Skylines / Clash of
+// Clans references) rather than the shallower establishing-shot angle the
+// main Grove uses.
+export default function VillageView({ userName, ownProjectNames, territories, onVisit, onClose }) {
   const people = useMemo(
-    () => [{ ownerName: userName, ownerEmail: null, projectCount: ownProjectCount, isMine: true }, ...(territories ?? [])],
-    [userName, ownProjectCount, territories]
+    () => [{ ownerName: userName, ownerEmail: null, projectNames: ownProjectNames ?? [], isMine: true }, ...(territories ?? [])],
+    [userName, ownProjectNames, territories]
   );
 
   return (
@@ -196,7 +251,7 @@ export default function VillageView({ userName, ownProjectCount, territories, on
       <div className="pointer-events-none absolute left-6 top-6 right-6 flex items-start justify-between">
         <div className="glass-surface pointer-events-auto rounded-2xl px-4 py-3">
           <h2 className="text-[18px] font-semibold text-stone-800">The Village</h2>
-          <p className="mt-0.5 text-[13px] text-stone-600">Drag to look around · click a tree to visit</p>
+          <p className="mt-0.5 text-[13px] text-stone-600">Drag to look around · click a tree to visit that project's owner</p>
         </div>
         <button
           type="button"

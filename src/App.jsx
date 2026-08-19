@@ -1175,7 +1175,7 @@ export default function App() {
         {villageOpen && (
           <VillageView
             userName={userName}
-            ownProjectCount={projects.length}
+            ownProjectNames={projects.map((p) => p.name)}
             territories={territories}
             onVisit={(email) => {
               handleChangeTerritory(email);
