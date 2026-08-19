@@ -319,12 +319,12 @@ export default function FocusReviewView({
                               onClick={() => setTag(opt.value)}
                               title={opt.label}
                               aria-pressed={tag === opt.value}
-                              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+                              className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
                                 tag === opt.value ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-700'
                               }`}
                             >
                               <opt.Icon size={13} strokeWidth={2.5} />
-                              {opt.label}
+                              {tag === opt.value && opt.label}
                             </button>
                           ))}
                         </div>
