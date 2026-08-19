@@ -14,6 +14,7 @@ export default function Header({
   territories,
   viewingTerritory,
   onChangeTerritory,
+  onOpenVillage,
 }) {
   // Re-picked only when the (finer-grained) greeting bucket actually
   // changes, not every minute tick from useTimeOfDay — keying this off the
@@ -67,7 +68,12 @@ export default function Header({
         </div>
       )}
       <div className="flex items-center gap-3">
-        <TerritorySwitcher territories={territories} viewingTerritory={viewingTerritory} onChange={onChangeTerritory} />
+        <TerritorySwitcher
+          territories={territories}
+          viewingTerritory={viewingTerritory}
+          onChange={onChangeTerritory}
+          onOpenVillage={onOpenVillage}
+        />
         <ModeToggle mode={mode} onChange={onChangeMode} />
         {!viewingTerritory && (
           <button

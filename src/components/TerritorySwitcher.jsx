@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, MapPin } from 'lucide-react';
+import { ChevronDown, MapPin, LayoutGrid } from 'lucide-react';
 import { avatarColor } from '../utils/avatarColor';
 
 // `territories` is the real company directory (fetched from
 // /api/territories) — every other @zuper.co account, each one a real
 // account you can freely view and edit, not a static mock list.
 // `viewingTerritory` is the owner's email, or null for "my own Grove".
-export default function TerritorySwitcher({ territories, viewingTerritory, onChange }) {
+export default function TerritorySwitcher({ territories, viewingTerritory, onChange, onOpenVillage }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const current = territories?.find((t) => t.ownerEmail === viewingTerritory);
@@ -45,6 +45,18 @@ export default function TerritorySwitcher({ territories, viewingTerritory, onCha
           >
             My Grove
           </button>
+          {onOpenVillage && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenVillage();
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-[14px] font-medium text-stone-600 transition-colors hover:bg-black/5"
+            >
+              <LayoutGrid size={14} strokeWidth={2} /> View as a village
+            </button>
+          )}
           <div className="my-1 border-t border-black/5" />
           <div className="px-3.5 py-1 text-[11.5px] font-semibold uppercase tracking-wide text-stone-400">
             Visit a teammate

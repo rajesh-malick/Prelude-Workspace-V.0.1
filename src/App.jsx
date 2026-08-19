@@ -22,6 +22,7 @@ import WelcomeToast from './components/WelcomeToast';
 import CelebrationToast from './components/CelebrationToast';
 import NotificationsPanel from './components/NotificationsPanel';
 import SettingsPanel from './components/SettingsPanel';
+import VillageView from './components/VillageView';
 import FocusDashboard from './focus/FocusDashboard';
 import FocusProjectView from './focus/FocusProjectView';
 import FocusReviewView from './focus/FocusReviewView';
@@ -274,6 +275,7 @@ export default function App() {
   const [justPlantedId, setJustPlantedId] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [villageOpen, setVillageOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   // An email, or null for "my own Grove" — every other account at the
   // company is a real, browsable territory (see /api/territories), not a
@@ -958,6 +960,7 @@ export default function App() {
         territories={territories}
         viewingTerritory={viewingTerritory}
         onChangeTerritory={handleChangeTerritory}
+        onOpenVillage={() => setVillageOpen(true)}
       />
 
       {/* The canvas is decorative as far as assistive tech is concerned —
@@ -1167,6 +1170,21 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>{showWelcome && <WelcomeToast name={userName} onDismiss={() => setShowWelcome(false)} />}</AnimatePresence>
+
+      <AnimatePresence>
+        {villageOpen && (
+          <VillageView
+            userName={userName}
+            ownProjectCount={projects.length}
+            territories={territories}
+            onVisit={(email) => {
+              handleChangeTerritory(email);
+              setVillageOpen(false);
+            }}
+            onClose={() => setVillageOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {celebration && (

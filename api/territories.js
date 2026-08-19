@@ -11,8 +11,16 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const rows = await sql`SELECT name, email FROM users WHERE email != ${user.email} ORDER BY name`;
-    return res.status(200).json({ territories: rows.map((r) => ({ ownerName: r.name, ownerEmail: r.email })) });
+    // jsonb_array_length errors on NULL, hence the COALESCE — a
+    // brand-new account with no projects yet has projects_data = NULL,
+    // not an empty array.
+    const rows = await sql`
+      SELECT name, email, COALESCE(jsonb_array_length(projects_data), 0) AS project_count
+      FROM users WHERE email != ${user.email} ORDER BY name
+    `;
+    return res.status(200).json({
+      territories: rows.map((r) => ({ ownerName: r.name, ownerEmail: r.email, projectCount: Number(r.project_count) })),
+    });
   } catch (err) {
     console.error('GET /api/territories error', err);
     return res.status(500).json({ error: 'Could not load teammates.' });
