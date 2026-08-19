@@ -9,14 +9,11 @@ import { getTreeGeometry, hash } from '../utils/treeGeometry';
 const PLOT_RADIUS = 1.55;
 const PLOT_COLOR = '#C7A76B';
 const PLOT_BORDER_COLOR = '#9C7B45';
-const PATH_COLOR = '#D9CBA3';
-const PATH_WIDTH = 0.45;
 const SPACING = 4.1;
 
-// A raised, bordered patch of ground under each person's cluster — the
-// reference screenshots (Cities: Skylines, Clash of Clans) both read as a
-// set of distinct owned parcels connected by paths, not objects scattered
-// loose on one continuous field.
+// A raised, bordered patch of ground under each person's cluster — each
+// teammate visibly owns their own separate parcel, kept deliberately
+// unconnected to anyone else's (no paths between territories).
 function Plot() {
   return (
     <group>
@@ -29,26 +26,6 @@ function Plot() {
         <meshStandardMaterial color={PLOT_COLOR} />
       </mesh>
     </group>
-  );
-}
-
-// Grid-adjacent plots only ever connect straight along X or straight along
-// Z (never diagonal) — an axis-aligned box sized along whichever axis is
-// "long" sidesteps needing rotation math (and its sign-convention
-// guesswork) entirely.
-function PathSegment({ from, to }) {
-  const dx = to[0] - from[0];
-  const dz = to[2] - from[2];
-  const midX = (from[0] + to[0]) / 2;
-  const midZ = (from[2] + to[2]) / 2;
-  const horizontal = Math.abs(dx) > Math.abs(dz);
-  const length = horizontal ? Math.abs(dx) : Math.abs(dz);
-  const size = horizontal ? [length, 0.04, PATH_WIDTH] : [PATH_WIDTH, 0.04, length];
-  return (
-    <mesh position={[midX, 0.03, midZ]} receiveShadow>
-      <boxGeometry args={size} />
-      <meshStandardMaterial color={PATH_COLOR} />
-    </mesh>
   );
 }
 
@@ -170,18 +147,6 @@ function VillageScene({ people, onVisit }) {
     return [col * SPACING - offset, 0, row * SPACING - offset];
   });
 
-  // A path to every grid-adjacent neighbor (right and below) — enough to
-  // read as a connected village rather than a co-ordinate dump of plots.
-  const paths = [];
-  positions.forEach((pos, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const rightIndex = row * cols + (col + 1);
-    if (col + 1 < cols && rightIndex < positions.length) paths.push([pos, positions[rightIndex]]);
-    const belowIndex = (row + 1) * cols + col;
-    if (belowIndex < positions.length) paths.push([pos, positions[belowIndex]]);
-  });
-
   return (
     <>
       <hemisphereLight args={['#FDF6EC', '#DDD0A8', 0.65]} />
@@ -192,10 +157,6 @@ function VillageScene({ people, onVisit }) {
         <circleGeometry args={[groundRadius, 48]} />
         <meshStandardMaterial color="#B8C98A" roughness={1} />
       </mesh>
-
-      {paths.map(([from, to], i) => (
-        <PathSegment key={i} from={from} to={to} />
-      ))}
 
       {people.map((person, i) => (
         <PersonPlot key={person.ownerEmail ?? 'mine'} person={person} position={positions[i]} onVisit={onVisit} />
