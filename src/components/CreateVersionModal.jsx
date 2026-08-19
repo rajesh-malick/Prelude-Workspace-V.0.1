@@ -33,6 +33,25 @@ function inferTypeFromUrl(url) {
   return EXT_TYPE_MAP[ext] ?? 'text/html';
 }
 
+// A plain figma.com/file, /design, or /proto link sends response headers
+// that block it from being embedded in anyone else's iframe (a security
+// default, not a bug on either end) — it would just render as a
+// permanently blank preview. Figma's own /embed endpoint is built
+// specifically to be iframed and wraps the same link, so rewrite to that
+// instead of embedding the raw URL. Already-embed links and non-Figma
+// URLs pass through untouched.
+function toEmbeddableUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (/(^|\.)figma\.com$/.test(parsed.hostname) && !parsed.pathname.startsWith('/embed')) {
+      return `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(url)}`;
+    }
+  } catch {
+    // Not a parseable URL — leave it as-is, existing link validation covers this.
+  }
+  return url;
+}
+
 export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }) {
   const [label, setLabel] = useState(suggestedLabel);
   const [description, setDescription] = useState('');
@@ -81,7 +100,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
       description: description.trim(),
       changelog: changelog.trim(),
       status,
-      assetUrl: fileDataUrl || trimmedLink,
+      assetUrl: fileDataUrl || (trimmedLink ? toEmbeddableUrl(trimmedLink) : trimmedLink),
       assetName: file?.name ?? trimmedLink,
       assetType: file?.type ?? (trimmedLink ? inferTypeFromUrl(trimmedLink) : null),
     });
