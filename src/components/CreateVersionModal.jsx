@@ -52,11 +52,17 @@ function toEmbeddableUrl(url) {
   return url;
 }
 
-export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }) {
-  const [label, setLabel] = useState(suggestedLabel);
-  const [description, setDescription] = useState('');
-  const [changelog, setChangelog] = useState('');
-  const [status, setStatus] = useState('draft');
+// `version` (optional) switches this into edit mode — same form, prefilled
+// with an existing version's current values, calling `onSave` instead of
+// `onCreate`. The prototype asset stays optional in edit mode since one was
+// already attached when the version was created; picking a new file or link
+// replaces it, otherwise the existing asset is kept as-is.
+export default function CreateVersionModal({ suggestedLabel, version, onCreate, onSave, onClose }) {
+  const isEditing = Boolean(version);
+  const [label, setLabel] = useState(version?.label ?? suggestedLabel);
+  const [description, setDescription] = useState(version?.description ?? '');
+  const [changelog, setChangelog] = useState(version?.changelog ?? '');
+  const [status, setStatus] = useState(version?.status ?? 'draft');
   const [file, setFile] = useState(null);
   const [fileDataUrl, setFileDataUrl] = useState(null);
   const [link, setLink] = useState('');
@@ -86,24 +92,38 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
     }
   };
 
-  // A prototype asset is mandatory — either an uploaded file or a pasted
-  // link to hosted media (video, image, or a live HTML prototype).
-  const hasAsset = Boolean(fileDataUrl || link.trim());
+  // A prototype asset is mandatory when creating — either an uploaded file
+  // or a pasted link to hosted media (video, image, or a live HTML
+  // prototype). When editing, the version already has one, so leaving both
+  // empty just means "keep the existing asset."
+  const hasNewAsset = Boolean(fileDataUrl || link.trim());
+  const hasAsset = hasNewAsset || isEditing;
   const canSubmit = label.trim() && hasAsset;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!canSubmit) return;
     const trimmedLink = link.trim();
-    onCreate({
+    const payload = {
       label: label.trim(),
       description: description.trim(),
       changelog: changelog.trim(),
       status,
-      assetUrl: fileDataUrl || (trimmedLink ? toEmbeddableUrl(trimmedLink) : trimmedLink),
-      assetName: file?.name ?? trimmedLink,
-      assetType: file?.type ?? (trimmedLink ? inferTypeFromUrl(trimmedLink) : null),
-    });
+    };
+    if (hasNewAsset) {
+      payload.assetUrl = fileDataUrl || (trimmedLink ? toEmbeddableUrl(trimmedLink) : trimmedLink);
+      payload.assetName = file?.name ?? trimmedLink;
+      payload.assetType = file?.type ?? (trimmedLink ? inferTypeFromUrl(trimmedLink) : null);
+    } else if (isEditing) {
+      payload.assetUrl = version.assetUrl;
+      payload.assetName = version.assetName;
+      payload.assetType = version.assetType;
+    }
+    if (isEditing) {
+      onSave(payload);
+    } else {
+      onCreate(payload);
+    }
   };
 
   return (
@@ -125,7 +145,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
         className="glass-surface w-[420px] max-h-[85vh] overflow-y-auto rounded-2xl p-5"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-[18px] font-semibold text-stone-800">New version</h3>
+          <h3 className="text-[18px] font-semibold text-stone-800">{isEditing ? 'Edit version' : 'New version'}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -180,8 +200,11 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
         </div>
 
         <label className="mt-3 block text-[13px] font-medium text-stone-600">
-          Prototype asset <span className="text-red-500">*</span>
+          Prototype asset {!isEditing && <span className="text-red-500">*</span>}
         </label>
+        {isEditing && !hasNewAsset && (
+          <p className="mt-1 text-[12px] text-stone-500">Current: {version.assetName || 'attached asset'} — pick a new file or link to replace it.</p>
+        )}
         <input ref={fileInputRef} type="file" accept="image/*,video/*,.html,.htm" className="hidden" onChange={handleFileChange} />
         <button
           type="button"
@@ -208,7 +231,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
             className="w-full min-w-0 flex-1 bg-transparent text-[14px] text-stone-700 outline-none placeholder:text-stone-500"
           />
         </div>
-        {!hasAsset && (
+        {!hasAsset && !isEditing && (
           <p className="mt-1.5 text-[12px] text-red-500">A file or a link is required to create a version.</p>
         )}
 
@@ -225,7 +248,7 @@ export default function CreateVersionModal({ suggestedLabel, onCreate, onClose }
             disabled={!canSubmit}
             className="rounded-full bg-stone-800 px-4 py-1.5 text-[14px] font-medium text-white transition-opacity disabled:opacity-40"
           >
-            Create version
+            {isEditing ? 'Save changes' : 'Create version'}
           </button>
         </div>
       </motion.form>

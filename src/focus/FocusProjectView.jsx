@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore, MapPin } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, ChevronRight, Archive, ArchiveRestore, MapPin, Pencil } from 'lucide-react';
 import { isResolved } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
@@ -38,6 +38,8 @@ export default function FocusProjectView({
   onDeleteVersion,
   onToggleArchive,
   onDeleteProject,
+  onEditProject,
+  onEditVersion,
   visitingOwnerName,
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
@@ -72,17 +74,30 @@ export default function FocusProjectView({
         >
           <ArrowLeft size={14} strokeWidth={2} /> Projects
         </button>
-        {onDeleteProject && (
-          <button
-            type="button"
-            onClick={() => setConfirmingDeleteProject(true)}
-            title="Delete project"
-            aria-label="Delete project"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
-          >
-            <Trash2 size={14} strokeWidth={2} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {onEditProject && (
+            <button
+              type="button"
+              onClick={onEditProject}
+              title="Edit project"
+              aria-label="Edit project"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-700"
+            >
+              <Pencil size={13} strokeWidth={2} />
+            </button>
+          )}
+          {onDeleteProject && (
+            <button
+              type="button"
+              onClick={() => setConfirmingDeleteProject(true)}
+              title="Delete project"
+              aria-label="Delete project"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       </div>
 
       {confirmingDeleteProject && (
@@ -266,17 +281,30 @@ export default function FocusProjectView({
               key={v.id}
               className="group relative rounded-2xl bg-white/70 ring-1 ring-black/5 transition-colors hover:bg-white"
             >
-              {onDeleteVersion && (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(v.id)}
-                  title="Delete version"
-                  aria-label={`Delete ${v.label}`}
-                  className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 flex-none items-center justify-center rounded-lg text-stone-300 opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
-                >
-                  <Trash2 size={13} strokeWidth={2} />
-                </button>
-              )}
+              <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1">
+                {onEditVersion && (
+                  <button
+                    type="button"
+                    onClick={() => onEditVersion(v.id)}
+                    title="Edit version"
+                    aria-label={`Edit ${v.label}`}
+                    className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-stone-300 opacity-0 transition-opacity hover:text-stone-600 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <Pencil size={12} strokeWidth={2} />
+                  </button>
+                )}
+                {onDeleteVersion && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(v.id)}
+                    title="Delete version"
+                    aria-label={`Delete ${v.label}`}
+                    className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-stone-300 opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <Trash2 size={13} strokeWidth={2} />
+                  </button>
+                )}
+              </div>
               <button type="button" onClick={() => onOpenVersion(v.id)} className="flex w-full flex-col p-4 text-left">
                 <div className="flex items-center gap-2">
                   <span

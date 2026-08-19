@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowUpRight, Check, Plus, Trash2, MapPin } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, Plus, Trash2, MapPin, Pencil } from 'lucide-react';
 import { isResolved } from '../utils/commentStatus';
 import { avatarColor } from '../utils/avatarColor';
 
@@ -81,6 +81,8 @@ export default function ProjectOverlay({
   onRequestNewVersion,
   onDeleteVersion,
   onDeleteProject,
+  onEditProject,
+  onEditVersion,
   visitingOwnerName,
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(null);
@@ -124,17 +126,30 @@ export default function ProjectOverlay({
           >
             <ArrowLeft size={15} strokeWidth={2} /> Grove
           </button>
-          {onDeleteProject && (
-            <button
-              type="button"
-              onClick={() => setConfirmingDeleteProject(true)}
-              title="Delete project"
-              aria-label="Delete project"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
-            >
-              <Trash2 size={14} strokeWidth={2} />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {onEditProject && (
+              <button
+                type="button"
+                onClick={onEditProject}
+                title="Edit project"
+                aria-label="Edit project"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-700"
+              >
+                <Pencil size={13} strokeWidth={2} />
+              </button>
+            )}
+            {onDeleteProject && (
+              <button
+                type="button"
+                onClick={() => setConfirmingDeleteProject(true)}
+                title="Delete project"
+                aria-label="Delete project"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 size={14} strokeWidth={2} />
+              </button>
+            )}
+          </div>
         </div>
 
         {confirmingDeleteProject && (
@@ -277,6 +292,17 @@ export default function ProjectOverlay({
                       {v.comments.length > 0 && <span className="ml-1.5 text-stone-400">· {v.comments.length}</span>}
                     </span>
                   </button>
+                  {onEditVersion && (
+                    <button
+                      type="button"
+                      onClick={() => onEditVersion(v.id)}
+                      title="Edit version"
+                      aria-label={`Edit ${v.label}`}
+                      className="flex h-6 w-6 flex-none items-center justify-center rounded-md text-stone-300 opacity-0 transition-opacity hover:text-stone-600 focus-visible:opacity-100 group-hover:opacity-100"
+                    >
+                      <Pencil size={12} strokeWidth={2} />
+                    </button>
+                  )}
                   {onDeleteVersion && (
                     <button
                       type="button"

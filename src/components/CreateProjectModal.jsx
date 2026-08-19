@@ -10,15 +10,24 @@ const STATUS_OPTIONS = [
 
 const COLOR_OPTIONS = ['#4E9A5C', '#C98A2E', '#3E7FB0', '#8B6FB0', '#C9638A', '#3E9A9A'];
 
-export default function CreateProjectModal({ onCreate, onClose }) {
-  const [name, setName] = useState('');
-  const [status, setStatus] = useState('active');
-  const [color, setColor] = useState(COLOR_OPTIONS[0]);
+// `project` (optional) switches this into edit mode — same form, prefilled
+// with an existing project's current values, calling `onSave` instead of
+// `onCreate` and skipping the "a new tree grows" hint that only makes
+// sense the first time.
+export default function CreateProjectModal({ project, onCreate, onSave, onClose }) {
+  const isEditing = Boolean(project);
+  const [name, setName] = useState(project?.name ?? '');
+  const [status, setStatus] = useState(project?.status ?? 'active');
+  const [color, setColor] = useState(project?.color ?? COLOR_OPTIONS[0]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onCreate({ name: name.trim(), status, color });
+    if (isEditing) {
+      onSave({ name: name.trim(), status, color });
+    } else {
+      onCreate({ name: name.trim(), status, color });
+    }
   };
 
   return (
@@ -40,7 +49,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
         className="glass-surface w-[380px] rounded-2xl p-5"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-[16px] font-semibold text-stone-800">New project</h3>
+          <h3 className="text-[16px] font-semibold text-stone-800">{isEditing ? 'Edit project' : 'New project'}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -94,9 +103,11 @@ export default function CreateProjectModal({ onCreate, onClose }) {
           ))}
         </div>
 
-        <p className="mt-4 text-[11px] text-stone-500">
-          A new tree grows for it right away — you'll add its first version next.
-        </p>
+        {!isEditing && (
+          <p className="mt-4 text-[11px] text-stone-500">
+            A new tree grows for it right away — you'll add its first version next.
+          </p>
+        )}
 
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
@@ -111,7 +122,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
             disabled={!name.trim()}
             className="rounded-full bg-stone-800 px-4 py-1.5 text-[12.5px] font-medium text-white transition-opacity disabled:opacity-40"
           >
-            Create project
+            {isEditing ? 'Save changes' : 'Create project'}
           </button>
         </div>
       </motion.form>

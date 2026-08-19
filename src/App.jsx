@@ -290,6 +290,8 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [creatingVersionFor, setCreatingVersionFor] = useState(null);
   const [creatingProject, setCreatingProject] = useState(false);
+  const [editingProjectFor, setEditingProjectFor] = useState(null);
+  const [editingVersion, setEditingVersion] = useState(null);
   const [justPlantedId, setJustPlantedId] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -904,6 +906,27 @@ export default function App() {
     ? displayedProjects.find((p) => p.id === creatingVersionFor) ?? null
     : null;
 
+  const handleEditVersion = useCallback(
+    (projectId, versionId, payload) => {
+      updateProjects((prev) =>
+        prev.map((p) => {
+          if (p.id !== projectId) return p;
+          const versions = p.versions.map((v) => (v.id === versionId ? { ...v, ...payload } : v));
+          return { ...p, versions };
+        })
+      );
+      setEditingVersion(null);
+    },
+    [updateProjects]
+  );
+
+  const editingVersionProject = editingVersion
+    ? displayedProjects.find((p) => p.id === editingVersion.projectId) ?? null
+    : null;
+  const editingVersionData = editingVersionProject
+    ? editingVersionProject.versions.find((v) => v.id === editingVersion.versionId) ?? null
+    : null;
+
   // A convenience for seeing a populated Grove without planting anything
   // by hand — only offered while the Grove is actually empty. Tagged
   // `isSample` so a new user who's done poking around can clear them out
@@ -975,6 +998,18 @@ export default function App() {
     [reducedMotion, session]
   );
 
+  const handleEditProject = useCallback(
+    (projectId, { name, status, color }) => {
+      updateProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, name, status, color } : p)));
+      setEditingProjectFor(null);
+    },
+    [updateProjects]
+  );
+
+  const editingProjectData = editingProjectFor
+    ? displayedProjects.find((p) => p.id === editingProjectFor) ?? null
+    : null;
+
   // Blank while the /api/auth/me check is in flight — avoids flashing the
   // sign-in screen for someone who's already got a valid session cookie.
   if (!sessionChecked) {
@@ -988,7 +1023,8 @@ export default function App() {
   // No panel/modal is covering the Grove and no tree is still mid-germination
   // — the moment either is true, the persistent name plates would otherwise
   // float on top of it (drei's Html portals ignore normal CSS stacking).
-  const showNameTags = !destination && !creatingProject && !creatingVersionFor && !justPlantedId;
+  const showNameTags =
+    !destination && !creatingProject && !creatingVersionFor && !justPlantedId && !editingProjectFor && !editingVersion;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -1075,6 +1111,8 @@ export default function App() {
                 onRequestNewVersion={() => setCreatingVersionFor(focusedProject.id)}
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
                 onDeleteProject={handleDeleteProject}
+                onEditProject={() => setEditingProjectFor(focusedProject.id)}
+                onEditVersion={(versionId) => setEditingVersion({ projectId: focusedProject.id, versionId })}
                 visitingOwnerName={visitingOwnerName}
               />
             )}
@@ -1144,6 +1182,8 @@ export default function App() {
                 onDeleteVersion={(versionId) => handleDeleteVersion(focusedProject.id, versionId)}
                 onDeleteProject={handleDeleteProject}
                 onToggleArchive={handleToggleArchive}
+                onEditProject={() => setEditingProjectFor(focusedProject.id)}
+                onEditVersion={(versionId) => setEditingVersion({ projectId: focusedProject.id, versionId })}
                 visitingOwnerName={visitingOwnerName}
               />
             )}
@@ -1192,6 +1232,26 @@ export default function App() {
       <AnimatePresence>
         {creatingProject && (
           <CreateProjectModal onCreate={handleCreateProject} onClose={() => setCreatingProject(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingProjectData && (
+          <CreateProjectModal
+            project={editingProjectData}
+            onSave={(payload) => handleEditProject(editingProjectData.id, payload)}
+            onClose={() => setEditingProjectFor(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingVersionData && (
+          <CreateVersionModal
+            version={editingVersionData}
+            onSave={(payload) => handleEditVersion(editingVersionProject.id, editingVersionData.id, payload)}
+            onClose={() => setEditingVersion(null)}
+          />
         )}
       </AnimatePresence>
 
