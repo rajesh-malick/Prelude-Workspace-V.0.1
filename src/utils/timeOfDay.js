@@ -59,34 +59,40 @@ const HORIZON = { top: '#F7C99A', bottom: '#D97A5C', fog: '#E2926E', hemiSky: '#
 // a color-stop set per mood, lerped in at a fixed strength rather than
 // replacing the sky outright, so a rainy noon still reads as noon (just a
 // flatter, grayer one) instead of jumping to a flat preset color.
-const OVERCAST = { top: '#B7B9BD', bottom: '#9AA0A6', fog: '#A9ADB2', hemiSky: '#C7CBCF', hemiGround: '#7D8288' };
+// Thick enough to genuinely read as "clouds blocking the sun", not just a
+// gray-tinted clear sky — CloudCeiling (WeatherEffects.jsx) adds the actual
+// cloud geometry; this is just the ambient light/sky going with it.
+const CLOUDY = { top: '#9BA0A6', bottom: '#868C93', fog: '#8F959B', hemiSky: '#ADB3B9', hemiGround: '#6B7178' };
 const RAIN = { top: '#5C6670', bottom: '#4A535C', fog: '#5C6670', hemiSky: '#6B7480', hemiGround: '#3A4048' };
 const SNOW = { top: '#DCE6EC', bottom: '#C7D3DA', fog: '#D8E2E8', hemiSky: '#E8EFF3', hemiGround: '#AEB9C0' };
-const HAZE = { top: '#F2D9A8', bottom: '#E8C48A', fog: '#EFCB98', hemiSky: '#F5DDB0', hemiGround: '#C9A96E' };
+// The old "golden haze" cosmetic, now doing double duty as the deliberately
+// bright/warm "Sunny" preset — sun fully out, nothing blocking it.
+const SUNNY = { top: '#F2D9A8', bottom: '#E8C48A', fog: '#EFCB98', hemiSky: '#F5DDB0', hemiGround: '#C9A96E' };
 // True low-visibility fog — pale, desaturated, near-white — distinct from
-// HAZE above, which is a warm golden-hour cosmetic rather than a real
-// weather condition.
+// SUNNY above, which is a warm bright-sky cosmetic, not a real low-viz
+// condition.
 const FOG = { top: '#D9DCDD', bottom: '#C7CBCC', fog: '#D3D6D7', hemiSky: '#E6E8E9', hemiGround: '#AEB2B3' };
 // A dry, dusty tint for "windy" — nothing precipitating, just a slightly
 // hazy, warm-gray cast (see WindDebris in WeatherEffects.jsx for the actual
 // blowing-debris particles).
 const WINDY = { top: '#D8D6C9', bottom: '#C7C4B2', fog: '#D0CDBE', hemiSky: '#E2DFCF', hemiGround: '#AFAB94' };
 // A dark, storm-green-gray sky for thunderstorm — noticeably heavier than
-// plain rain, since this is meant to read as the severe case.
-const THUNDER = { top: '#3A4048', bottom: '#2C3138', fog: '#3A4048', hemiSky: '#454C56', hemiGround: '#20242A' };
+// plain rain, since this is meant to read as the severe case. CloudCeiling
+// adds the actual towering-anvil silhouette on top of this.
+const THUNDER = { top: '#333941', bottom: '#262B31', fog: '#333941', hemiSky: '#3D434B', hemiGround: '#1A1D21' };
 // Snow's cold tint pushed further and bluer — blizzard is snow turned up,
 // not a different mood.
 const BLIZZARD = { top: '#C9D6DE', bottom: '#AFC0CA', fog: '#C2CFD6', hemiSky: '#D8E3E8', hemiGround: '#8FA0AA' };
 
 const WEATHER_TINTS = {
-  overcast: [OVERCAST, 0.55],
+  cloudy: [CLOUDY, 0.72],
   rain: [RAIN, 0.7],
   snow: [SNOW, 0.5],
-  haze: [HAZE, 0.45],
+  sunny: [SUNNY, 0.45],
   fog: [FOG, 0.62],
   windy: [WINDY, 0.35],
-  thunderstorm: [THUNDER, 0.8],
-  blizzard: [BLIZZARD, 0.65],
+  thunderstorm: [THUNDER, 0.85],
+  blizzard: [BLIZZARD, 0.7],
 };
 
 // Continuous blend driven by `elevation` (-1..1) — no hard cuts between

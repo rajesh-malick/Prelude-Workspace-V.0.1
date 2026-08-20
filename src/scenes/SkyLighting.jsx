@@ -7,20 +7,23 @@ const SUN_DAY = '#FFEBC4';
 const SUN_HORIZON = '#FF9A5C';
 const MOON = '#7FA8D9';
 
-// Sun mostly hidden behind cloud (overcast/rain/snow) reads as flatter,
-// dimmer light and a nearer fog wall — haze scatters light instead of
-// blocking it, so it dims less but pulls fog in the most.
-const LIGHT_DAMPEN = { overcast: 0.65, rain: 0.5, snow: 0.7, haze: 0.85, fog: 0.75, windy: 0.9, thunderstorm: 0.4, blizzard: 0.55 };
+// Sun mostly-to-fully blocked (cloudy/rain/snow/thunderstorm) reads as
+// flatter, dimmer light — sunny scatters light instead of blocking it, so
+// it dims the least. Thunderstorm is the darkest short of actual night,
+// matching "blocks out the sun" from a real cumulonimbus.
+const LIGHT_DAMPEN = { cloudy: 0.55, rain: 0.5, snow: 0.7, sunny: 0.85, fog: 0.75, windy: 0.9, thunderstorm: 0.35, blizzard: 0.5 };
 const FOG_RANGE = {
   clear: [8, 22],
-  overcast: [7, 18],
+  cloudy: [7, 17],
   rain: [6, 15],
   snow: [7, 17],
-  haze: [4, 14],
+  sunny: [4, 14],
   fog: [3, 9],
   windy: [8, 20],
   thunderstorm: [5, 13],
-  blizzard: [4, 11],
+  // "Visibility drops to a quarter mile or less" — the tightest fog range
+  // of any preset, genuinely reads as a whiteout rather than just heavy snow.
+  blizzard: [2, 7],
 };
 
 // Sun by day, moon by night — one directional light, continuously

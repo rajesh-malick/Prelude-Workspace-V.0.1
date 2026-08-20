@@ -10,13 +10,14 @@ const FIELD = 22; // matches the Grove clearing's rough radius (see ForestFloor)
 const CEILING = 14;
 
 // Per-kind falling-particle tuning — thunderstorm is rain turned up (more
-// drops, faster fall), blizzard is snow turned up (more flakes, faster
-// fall, wider sideways sway) rather than a distinct system.
+// drops, faster fall). Blizzard is snow with the fall speed pulled WAY down
+// and the sideways sway pushed way up, so it reads as snow driven sideways
+// by wind rather than just falling fast — "blowing snow", not "heavy snow".
 const PRECIP_PARAMS = {
   rain: { count: 260, speed: 9, sway: 0, color: '#CFE0EA', size: 0.05, opacity: 0.55 },
   thunderstorm: { count: 380, speed: 13, sway: 0.15, color: '#C7D9E6', size: 0.055, opacity: 0.6 },
   snow: { count: 160, speed: 1.1, sway: 0.6, color: '#FFFFFF', size: 0.09, opacity: 0.85 },
-  blizzard: { count: 280, speed: 2.6, sway: 1.4, color: '#FFFFFF', size: 0.1, opacity: 0.9 },
+  blizzard: { count: 320, speed: 1.4, sway: 3.2, color: '#FFFFFF', size: 0.1, opacity: 0.95 },
 };
 
 // A falling-particle layer for rain/snow/thunderstorm/blizzard — one mutated
@@ -45,9 +46,17 @@ function Precipitation({ kind }) {
     if (!posAttr) return;
     for (let i = 0; i < count; i++) {
       let y = posAttr.array[i * 3 + 1] - speed * delta;
-      if (sway) posAttr.array[i * 3] += drift[i] * delta;
       if (y < 0) y = CEILING;
       posAttr.array[i * 3 + 1] = y;
+      if (sway) {
+        // Bounded and wrapped, not just accumulated — at blizzard's much
+        // stronger sway this would otherwise drift every flake clean off
+        // the field within seconds instead of reading as wind-driven snow.
+        let x = posAttr.array[i * 3] + drift[i] * delta;
+        if (x > FIELD) x = -FIELD;
+        if (x < -FIELD) x = FIELD;
+        posAttr.array[i * 3] = x;
+      }
     }
     posAttr.needsUpdate = true;
   });
@@ -122,6 +131,99 @@ function WindDebris() {
   );
 }
 
+// A cluster of overlapping blobs forming one puffy cloud mass — same
+// technique as Bush/leaf-canopy scatter elsewhere in the Grove. `anvil`
+// stacks the blobs into a taller column with a wide flattened cap, echoing
+// a cumulonimbus's towering-mountain-with-a-flat-top silhouette for the
+// thunderstorm case specifically; every other category is just a low,
+// wide puff.
+function CloudCluster({ scale, color, anvil }) {
+  const blobs = useMemo(() => {
+    const list = [];
+    const n = anvil ? 6 : 4;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const r = 0.5 + hash(i * 3.1 + (anvil ? 500 : 0)) * 0.4;
+      list.push({
+        position: [Math.cos(a) * r, anvil ? i * 0.22 : hash(i + 3) * 0.3, Math.sin(a) * r * 0.6],
+        scale: 0.7 + hash(i + 9) * 0.4,
+      });
+    }
+    if (anvil) {
+      // The flattened top a real cumulonimbus spreads into once it hits
+      // the upper atmosphere — wider and squashed, sitting above the rest.
+      list.push({ position: [0, n * 0.22 + 0.15, 0], scale: 1.7, flat: true });
+    }
+    return list;
+  }, [anvil]);
+
+  return (
+    <group scale={scale}>
+      {blobs.map((b, i) => (
+        <mesh key={i} position={b.position} scale={b.flat ? [b.scale, b.scale * 0.35, b.scale] : b.scale}>
+          <icosahedronGeometry args={[1, 1]} />
+          <meshStandardMaterial color={color} roughness={1} flatShading />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+const CLOUD_PARAMS = {
+  cloudy: { count: 11, height: 9, spread: 20, scale: 2.2, color: '#B7BDC2', speed: 0.15 },
+  rain: { count: 10, height: 8.5, spread: 20, scale: 2, color: '#8B939B', speed: 0.2 },
+  // Fewer, much larger, darker, and stacked into an anvil shape — the
+  // "massive towering cloud... dark threatening base" look, distinct at a
+  // glance from the flatter overcast/rain cloud decks.
+  thunderstorm: { count: 6, height: 7.5, spread: 18, scale: 3.6, color: '#3E444C', speed: 0.12, anvil: true },
+  snow: { count: 9, height: 9, spread: 20, scale: 2, color: '#D8DDE0', speed: 0.15 },
+  blizzard: { count: 9, height: 8, spread: 18, scale: 2.4, color: '#C3CBD1', speed: 0.18 },
+};
+
+// A drifting deck of cloud clusters overhead — actual geometry blocking the
+// sky, not just a color tint, for anything where clouds are meant to be the
+// visible cause (cloudy/rain/thunderstorm) or at least plausible (snow/
+// blizzard forms from clouds too). Sunny/fog/windy skip this — nothing
+// overhead in those.
+function CloudCeiling({ weather }) {
+  const params = CLOUD_PARAMS[weather];
+  const clouds = useMemo(() => {
+    if (!params) return [];
+    return Array.from({ length: params.count }, (_, i) => ({
+      z: (hash(i + 700) - 0.5) * params.spread * 2,
+      baseX: (hash(i + 800) - 0.5) * params.spread * 2,
+      y: params.height + hash(i + 900) * 1.5,
+      scale: params.scale * (0.7 + hash(i + 950) * 0.6),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weather]);
+  const groupRefs = useRef([]);
+
+  useFrame((state) => {
+    if (!params) return;
+    const t = state.clock.elapsedTime;
+    const span = params.spread * 2;
+    clouds.forEach((c, i) => {
+      const g = groupRefs.current[i];
+      if (!g) return;
+      let x = c.baseX + t * params.speed;
+      x -= Math.floor((x + params.spread) / span) * span;
+      g.position.set(x, c.y, c.z);
+    });
+  });
+
+  if (!params) return null;
+  return (
+    <group>
+      {clouds.map((c, i) => (
+        <group key={i} ref={(el) => (groupRefs.current[i] = el)} position={[c.baseX, c.y, c.z]}>
+          <CloudCluster scale={c.scale} color={params.color} anvil={Boolean(params.anvil)} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
 // A bright, fast-decaying point light overhead firing at random intervals —
 // cheap and reads as lightning without any actual bolt geometry, which
 // would need a lot more work to look right than a flash does.
@@ -145,19 +247,26 @@ function Lightning() {
 }
 
 export default function WeatherEffects({ weather }) {
+  if (weather === 'cloudy') return <CloudCeiling weather={weather} />;
   if (weather === 'rain' || weather === 'snow' || weather === 'blizzard') {
-    return <Precipitation kind={weather} />;
+    return (
+      <>
+        <CloudCeiling weather={weather} />
+        <Precipitation kind={weather} />
+      </>
+    );
   }
   if (weather === 'thunderstorm') {
     return (
       <>
+        <CloudCeiling weather={weather} />
         <Precipitation kind="thunderstorm" />
         <Lightning />
       </>
     );
   }
   if (weather === 'windy') return <WindDebris />;
-  // overcast/fog/haze/clear are purely the sky/fog/light tint from
-  // getSkyColors — nothing rendered here.
+  // sunny/fog/clear are purely the sky/fog/light tint from getSkyColors —
+  // nothing rendered here.
   return null;
 }

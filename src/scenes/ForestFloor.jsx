@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import RealisticGrassPatches from './RealisticFlora';
+import { lerpHex } from '../utils/colorLerp';
 
 // Deterministic pseudo-random in [0,1) — same trick used for tree/leaf
 // scatter, so the floor looks the same on every render/reload.
@@ -104,7 +105,14 @@ function BackgroundTree({ position, scale, trunkHeight }) {
 // Scatters ambient ground detail across the whole clearing, and rings it
 // with a wall of background trees + undergrowth so the Grove reads as a
 // clearing IN a forest, not a decorated lot sitting on its own.
-export default function ForestFloor({ windStrength = 0 }) {
+export default function ForestFloor({ windStrength = 0, weather }) {
+  // "Most of the area is covered with snow" — blends grass/litter toward
+  // white rather than hiding them, so it reads as a light dusting over the
+  // Grove's own ground detail instead of a flat white plane pasted on top.
+  // Rocks/bushes are left alone to keep this contained — the grass alone
+  // (220 tufts across the whole clearing) already carries the "snow on the
+  // ground" read.
+  const snowAmount = weather === 'blizzard' ? 1 : weather === 'snow' ? 0.7 : 0;
   const grass = useMemo(() => {
     const list = [];
     for (let i = 0; i < 220; i++) {
@@ -212,14 +220,14 @@ export default function ForestFloor({ windStrength = 0 }) {
           position={g.position}
           rotation={g.rotation}
           scale={g.scale}
-          color={g.color}
+          color={snowAmount ? lerpHex(g.color, '#FFFFFF', snowAmount) : g.color}
           windStrength={windStrength}
         />
       ))}
       {litter.map((l, i) => (
         <mesh key={`l${i}`} position={l.position} rotation={[-Math.PI / 2, 0, l.rotation]} scale={l.scale}>
           <icosahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial color={l.color} roughness={1} />
+          <meshStandardMaterial color={snowAmount ? lerpHex(l.color, '#FFFFFF', snowAmount) : l.color} roughness={1} />
         </mesh>
       ))}
       {rocks.map((r, i) => (

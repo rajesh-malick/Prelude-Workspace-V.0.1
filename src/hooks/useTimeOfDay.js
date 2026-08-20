@@ -6,9 +6,10 @@ function readHour() {
 }
 
 // Refreshes once a minute — plenty for a light that's supposed to drift
-// like a real sky, not a clock anyone is staring at. `weather` ('clear' |
-// 'overcast' | 'rain' | 'snow' | 'haze') tints the resulting sky on top of
-// the time-of-day gradient — see getSkyColors.
+// like a real sky, not a clock anyone is staring at. `weather` ('sunny' |
+// 'cloudy' | 'rain' | 'windy' | 'snow' | 'fog' | 'thunderstorm' |
+// 'blizzard') tints the resulting sky on top of the time-of-day gradient —
+// see getSkyColors.
 export default function useTimeOfDay(weather) {
   const [hour, setHour] = useState(() => readHour());
 

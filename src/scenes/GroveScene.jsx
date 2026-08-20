@@ -30,6 +30,17 @@ export default function GroveScene({
   // already doing most of the "this is severe" work.
   const windStrength = weather === 'windy' ? 1 : weather === 'thunderstorm' ? 0.6 : weather === 'blizzard' ? 0.8 : 0;
 
+  // "Wet ground" for rain/thunderstorm (darker, glossier — a puddle-sheen
+  // rather than the usual matte dirt) and "ground covered with snow" for
+  // snow/blizzard (pale, still matte — snow doesn't shine like a puddle).
+  const GROUND_LOOK = {
+    rain: { color: '#8A7A5E', roughness: 0.35 },
+    thunderstorm: { color: '#736451', roughness: 0.3 },
+    snow: { color: '#E9EDEE', roughness: 0.9 },
+    blizzard: { color: '#F1F4F5', roughness: 0.9 },
+  };
+  const ground = GROUND_LOOK[weather] ?? { color: '#DDD0A8', roughness: 1 };
+
   return (
     <>
       <SkyLighting elevation={elevation} sky={sky} weather={weather} />
@@ -39,13 +50,13 @@ export default function GroveScene({
           visible edge-of-the-world seam */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[26, 48]} />
-        <meshStandardMaterial color="#DDD0A8" roughness={1} />
+        <meshStandardMaterial color={ground.color} roughness={ground.roughness} />
       </mesh>
 
       {/* Forest ambience — grass, leaf litter, stones and undergrowth
           across the clearing, ringed by a wall of background trees so the
           Grove reads as a clearing IN a forest, not a lot on its own */}
-      <ForestFloor windStrength={windStrength} />
+      <ForestFloor windStrength={windStrength} weather={weather} />
       <AmbientLife reducedMotion={reducedMotion} isNight={isNight} />
 
       {projects.length === 0 ? (

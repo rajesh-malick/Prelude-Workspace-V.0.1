@@ -7,16 +7,20 @@ const COLOR_OPTIONS = ['#4E9A5C', '#C98A2E', '#3E7FB0', '#8B6FB0', '#C9638A', '#
 const MAX_AVATAR_BYTES = 900_000;
 
 const WEATHER_OPTIONS = [
-  { value: 'clear', label: 'Clear' },
-  { value: 'overcast', label: 'Overcast' },
+  { value: 'sunny', label: 'Sunny' },
+  { value: 'cloudy', label: 'Cloudy' },
   { value: 'rain', label: 'Rain' },
   { value: 'windy', label: 'Windy' },
   { value: 'snow', label: 'Snow' },
   { value: 'fog', label: 'Fog' },
-  { value: 'haze', label: 'Golden haze' },
   { value: 'thunderstorm', label: 'Thunderstorm' },
   { value: 'blizzard', label: 'Blizzard' },
 ];
+
+// 'clear'/'overcast'/'haze' were the old names for 'sunny'/'cloudy'/'sunny'
+// — remapped so a profile saved before the rename still shows the right
+// button highlighted instead of nothing.
+const LEGACY_WEATHER_MODE = { clear: 'sunny', overcast: 'cloudy', haze: 'sunny' };
 
 export default function EditProfileModal({
   name: initialName,
@@ -32,7 +36,9 @@ export default function EditProfileModal({
   const [bio, setBio] = useState(initialBio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl ?? null);
   const [villageColor, setVillageColor] = useState(initialVillageColor ?? null);
-  const [weatherMode, setWeatherMode] = useState(initialWeatherMode ?? 'clear');
+  const [weatherMode, setWeatherMode] = useState(
+    LEGACY_WEATHER_MODE[initialWeatherMode] ?? initialWeatherMode ?? 'sunny'
+  );
   const [weatherCity, setWeatherCity] = useState(initialWeatherCity ?? '');
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);

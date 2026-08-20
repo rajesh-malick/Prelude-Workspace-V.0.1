@@ -374,7 +374,10 @@ export default function App() {
   // than leaving the last city's weather stuck on screen.
   useEffect(() => {
     if (profile.weatherMode && profile.weatherMode !== 'auto') {
-      setWeatherCategory(profile.weatherMode);
+      // 'clear'/'overcast'/'haze' were the old names for 'sunny'/'cloudy'/
+      // 'sunny', still possibly sitting in a profile saved before the rename.
+      const LEGACY = { clear: 'sunny', overcast: 'cloudy', haze: 'sunny' };
+      setWeatherCategory(LEGACY[profile.weatherMode] ?? profile.weatherMode);
       return;
     }
     if (profile.weatherMode !== 'auto' || !profile.weatherCity) {

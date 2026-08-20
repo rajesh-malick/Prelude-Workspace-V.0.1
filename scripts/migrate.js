@@ -53,9 +53,10 @@ async function migrate() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS village_color TEXT
   `;
   // Weather customization for the Grove sky — either a fixed cosmetic
-  // preset ('clear' | 'overcast' | 'rain' | 'snow' | 'haze') or 'auto',
-  // which resolves to real current conditions for weather_city via
-  // api/weather.js. Null means "no preference set" (behaves as 'clear').
+  // preset ('sunny' | 'cloudy' | 'rain' | 'windy' | 'snow' | 'fog' |
+  // 'thunderstorm' | 'blizzard') or 'auto', which resolves to real current
+  // conditions for weather_city via api/weather.js. Null means "no
+  // preference set" (behaves as 'clear' — untinted, the pre-feature sky).
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS weather_mode TEXT
   `;

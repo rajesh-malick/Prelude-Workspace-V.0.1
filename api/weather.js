@@ -10,7 +10,7 @@ const THUNDER_CODES = new Set([95, 96, 99]);
 const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
 const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]);
 const FOG_CODES = new Set([45, 48]);
-const OVERCAST_CODES = new Set([2, 3]);
+const CLOUDY_CODES = new Set([2, 3]);
 
 // Open-Meteo's weather_code alone has no concept of "windy" or "blizzard"
 // — those need actual wind speed, which is a separate field. Fresh-breeze-
@@ -24,8 +24,8 @@ function resolveCategory(code, windKmh) {
   if (RAIN_CODES.has(code)) return 'rain';
   if (FOG_CODES.has(code)) return 'fog';
   if (windKmh >= WINDY_THRESHOLD_KMH) return 'windy';
-  if (OVERCAST_CODES.has(code)) return 'overcast';
-  return 'clear';
+  if (CLOUDY_CODES.has(code)) return 'cloudy';
+  return 'sunny';
 }
 
 // A free, keyless weather provider (Open-Meteo) — no API key to set up or
