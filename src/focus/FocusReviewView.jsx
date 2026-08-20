@@ -18,6 +18,7 @@ import DetailsCommentsSwitch from '../components/DetailsCommentsSwitch';
 import SlashTagMenu from '../components/SlashTagMenu';
 import useSlashTagPicker from '../hooks/useSlashTagPicker';
 import { TAG_OPTIONS, TAG_ICON } from '../utils/commentTags';
+import { getEmbedSrc } from '../utils/embedProxy';
 
 const STATUS_LABEL = {
   approved: 'Approved',
@@ -127,11 +128,9 @@ export default function FocusReviewView({
         )}
         {assetKind === 'html' && (
           <>
-            <iframe src={version.assetUrl} title={version.label} className="absolute inset-0 h-full w-full border-0 bg-white" />
-            {/* Some sites refuse to be framed at all (X-Frame-Options /
-                CSP) and this renders as a silent blank iframe with no error
-                — a working link out is the fallback so "no preview" never
-                means "no way to actually see it". */}
+            <iframe src={getEmbedSrc(version.assetUrl)} title={version.label} className="absolute inset-0 h-full w-full border-0 bg-white" />
+            {/* Routed through /api/embed-proxy (see getEmbedSrc) — see
+                Grove's ReviewOverlay for why and its real limits. */}
             <a
               href={version.assetUrl}
               target="_blank"

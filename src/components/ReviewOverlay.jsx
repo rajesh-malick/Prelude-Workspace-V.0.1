@@ -18,6 +18,7 @@ import SlashTagMenu from './SlashTagMenu';
 import useSlashTagPicker from '../hooks/useSlashTagPicker';
 import { resolvedNote } from '../utils/commentStatus';
 import { TAG_OPTIONS, TAG_ICON, TAG_LABEL } from '../utils/commentTags';
+import { getEmbedSrc } from '../utils/embedProxy';
 
 const STATUS_LABEL = {
   approved: 'Approved',
@@ -305,14 +306,17 @@ export default function ReviewOverlay({
                 now), which is what makes it scrollable/interactive, since
                 a disabled iframe can't be scrolled at all either. */}
             <iframe
-              src={version.assetUrl}
+              src={getEmbedSrc(version.assetUrl)}
               title={version.label}
               className={`absolute inset-0 h-full w-full border-0 bg-white ${assetInteractive ? '' : 'pointer-events-none'}`}
             />
-            {/* Some sites refuse to be framed at all (X-Frame-Options /
-                CSP) and this renders as a silent blank iframe with no error
-                — a working link out is the fallback so "no preview" never
-                means "no way to actually see it". */}
+            {/* Routed through /api/embed-proxy (see getEmbedSrc), which
+                fetches the page itself and re-serves it same-origin so most
+                sites' own X-Frame-Options/CSP framing block never applies
+                here. Still not universal — heavy JS apps, bot-protected
+                sites, and anything requiring login can still render blank
+                or broken — a working link straight to the real site stays
+                the fallback either way. */}
             <a
               href={version.assetUrl}
               target="_blank"
