@@ -12,6 +12,7 @@ import { GERMINATION_SCENE_URL, GERMINATION_SCENE_DURATION } from './components/
 import Header from './components/Header';
 import NavDock from './components/NavDock';
 import GroveAccessibleNav from './components/GroveAccessibleNav';
+import Minimap from './components/Minimap';
 import ProjectOverlay from './components/ProjectOverlay';
 import ReviewOverlay from './components/ReviewOverlay';
 import SearchOverlay from './components/SearchOverlay';
@@ -1099,6 +1100,9 @@ export default function App() {
       {mode === 'grove' ? (
         <>
           {!destination && <GroveAccessibleNav projects={displayedProjects} onSelect={handleSelect} />}
+          {!destination && (
+            <Minimap projects={displayedProjects} hoveredId={hoveredId} onSelect={handleSelect} />
+          )}
 
           <AnimatePresence mode="wait">
             {arrived && destination?.kind === 'project' && focusedProject && (
