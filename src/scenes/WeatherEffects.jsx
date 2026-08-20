@@ -163,22 +163,32 @@ function CloudCluster({ scale, color, anvil }) {
       {blobs.map((b, i) => (
         <mesh key={i} position={b.position} scale={b.flat ? [b.scale, b.scale * 0.35, b.scale] : b.scale}>
           <icosahedronGeometry args={[1, 1]} />
-          <meshStandardMaterial color={color} roughness={1} flatShading />
+          {/* fog={false} — clouds sit well above and often past the ground
+              fog's short "far" distance (blizzard/thunderstorm especially);
+              without this they'd fade into invisibility exactly where they
+              matter most. */}
+          <meshStandardMaterial color={color} roughness={1} flatShading fog={false} />
         </mesh>
       ))}
     </group>
   );
 }
 
+// Heights all sit comfortably above the Grove overview's OrbitControls
+// orbit sphere (target y=0.6, distance 7-14, no minimum polar angle — so
+// the camera can go as high as ~14.6 while orbiting). Anything lower and a
+// cloud can end up close enough to the camera to fill the entire view with
+// one flat-shaded, effectively-unlit blob face — which read as the whole
+// Grove going solid black, not "cloudy".
 const CLOUD_PARAMS = {
-  cloudy: { count: 11, height: 9, spread: 20, scale: 2.2, color: '#B7BDC2', speed: 0.15 },
-  rain: { count: 10, height: 8.5, spread: 20, scale: 2, color: '#8B939B', speed: 0.2 },
+  cloudy: { count: 11, height: 17, spread: 20, scale: 2.2, color: '#B7BDC2', speed: 0.15 },
+  rain: { count: 10, height: 16.5, spread: 20, scale: 2, color: '#8B939B', speed: 0.2 },
   // Fewer, much larger, darker, and stacked into an anvil shape — the
   // "massive towering cloud... dark threatening base" look, distinct at a
   // glance from the flatter overcast/rain cloud decks.
-  thunderstorm: { count: 6, height: 7.5, spread: 18, scale: 3.6, color: '#3E444C', speed: 0.12, anvil: true },
-  snow: { count: 9, height: 9, spread: 20, scale: 2, color: '#D8DDE0', speed: 0.15 },
-  blizzard: { count: 9, height: 8, spread: 18, scale: 2.4, color: '#C3CBD1', speed: 0.18 },
+  thunderstorm: { count: 6, height: 16, spread: 18, scale: 3.6, color: '#3E444C', speed: 0.12, anvil: true },
+  snow: { count: 9, height: 17, spread: 20, scale: 2, color: '#D8DDE0', speed: 0.15 },
+  blizzard: { count: 9, height: 16, spread: 18, scale: 2.4, color: '#C3CBD1', speed: 0.18 },
 };
 
 // A drifting deck of cloud clusters overhead — actual geometry blocking the
