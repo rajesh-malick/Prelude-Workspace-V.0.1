@@ -230,7 +230,7 @@ export default function EditProfileModal({
           </button>
           <button
             type="submit"
-            className="rounded-full bg-stone-800 px-4 py-1.5 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90"
+            className="glass-btn-primary rounded-full px-4 py-1.5 text-[12.5px] font-medium"
           >
             Save
           </button>

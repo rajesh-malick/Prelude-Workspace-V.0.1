@@ -120,7 +120,7 @@ export default function CreateProjectModal({ project, onCreate, onSave, onClose 
           <button
             type="submit"
             disabled={!name.trim()}
-            className="rounded-full bg-stone-800 px-4 py-1.5 text-[12.5px] font-medium text-white transition-opacity disabled:opacity-40"
+            className="glass-btn-primary rounded-full px-4 py-1.5 text-[12.5px] font-medium disabled:opacity-40"
           >
             {isEditing ? 'Save changes' : 'Create project'}
           </button>

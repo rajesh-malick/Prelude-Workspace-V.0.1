@@ -230,7 +230,7 @@ export default function FocusProjectView({
           <button
             type="button"
             onClick={onRequestNewVersion}
-            className="flex items-center gap-1.5 rounded-full bg-stone-800 px-3.5 py-2 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90"
+            className="glass-btn-primary flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-medium"
           >
             <Plus size={13} strokeWidth={2.5} /> New version
           </button>

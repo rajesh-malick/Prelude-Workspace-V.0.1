@@ -135,7 +135,7 @@ export default function FocusReviewView({
               href={version.assetUrl}
               target="_blank"
               rel="noreferrer"
-              className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-stone-900/85 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-stone-900"
+              className="glass-btn-dark absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-white"
             >
               <ExternalLink size={12} strokeWidth={2.25} /> Open in new tab
             </a>
@@ -159,7 +159,7 @@ export default function FocusReviewView({
 
       {framed ? (
         /* Reserved strip, not an overlay — see Grove's ReviewOverlay. */
-        <div className="pointer-events-auto absolute inset-x-0 top-0 z-20 flex h-12 items-center justify-between bg-stone-950 px-3">
+        <div className="glass-btn-dark pointer-events-auto absolute inset-x-0 top-0 z-20 flex h-12 items-center justify-between rounded-none px-3">
           <button
             type="button"
             onClick={onBack}

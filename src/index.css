@@ -100,11 +100,86 @@ select {
   white-space: normal;
 }
 
-/* Shared "glass" surface — reused by the header, nav dock, and hover panel */
+/* Shared "glass" surfaces — the recipe below follows the standard modern
+   frosted-glass technique (blur + saturate boost to keep colors underneath
+   from turning muddy, a soft gradient fill rather than a flat tint, a thin
+   light-catching border, and a layered shadow: an inner top highlight +
+   inner bottom shade to suggest curvature, plus a normal drop shadow for
+   lift) — see Josh Comeau's backdrop-filter writeup
+   (joshwcomeau.com/css/backdrop-filter) and Apple's own Control Center/
+   Notification Center "material" panels for reference. Three variants:
+   .glass-surface for panels/modals/docks (the vast majority of surfaces —
+   editing this one class re-skins ~30 components at once), .glass-btn-primary
+   for CTA buttons (tinted with the app's own accent color rather than a
+   flat solid fill, so it reads as "the button to press" without breaking
+   from the glass language), and .glass-btn-dark for floating icon/pill
+   controls that sit directly over the dark Review-mode media background
+   rather than on top of a .glass-surface panel. Deliberately no `position`
+   or `::before` specular-highlight layer here even though that's a common
+   part of this recipe — these classes get combined with Tailwind's own
+   `fixed`/`absolute` utilities on the same element in ~20 places, and
+   since @tailwind utilities is injected above this point in the file,
+   this class's rules would win any tie and silently override those to
+   `position: static`. The inset top highlight in the box-shadow below
+   covers most of what the pseudo-element would have added anyway. */
 .glass-surface {
-  background: var(--surface);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: var(--shadow);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 252, 246, 0.4) 55%, rgba(255, 252, 246, 0.32) 100%);
+  backdrop-filter: blur(22px) saturate(180%) brightness(1.04);
+  -webkit-backdrop-filter: blur(22px) saturate(180%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.75),
+    inset 0 -1px 1px rgba(120, 90, 60, 0.06),
+    0 1px 2px rgba(72, 48, 24, 0.06),
+    var(--shadow);
+}
+
+.glass-btn-primary {
+  background: linear-gradient(165deg, rgba(178, 92, 58, 0.92), var(--accent-strong) 100%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.15),
+    0 6px 16px rgba(124, 57, 35, 0.35);
+}
+.glass-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.glass-btn-primary:disabled {
+  box-shadow: none;
+}
+
+.glass-btn-dark {
+  background: rgba(28, 25, 23, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.glass-btn-dark:hover {
+  background: rgba(28, 25, 23, 0.72);
+}
+
+/* Anyone with the OS-level "reduce transparency" preference set gets a
+   solid fallback instead — same shapes/colors, no blur, so nothing here
+   depends on seeing through it to read correctly. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-surface,
+  .glass-btn-primary,
+  .glass-btn-dark {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .glass-surface {
+    background: rgba(255, 252, 246, 0.98);
+  }
+  .glass-btn-primary {
+    background: var(--accent-strong);
+  }
+  .glass-btn-dark {
+    background: rgba(28, 25, 23, 0.95);
+  }
 }

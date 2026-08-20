@@ -322,7 +322,7 @@ export default function ReviewOverlay({
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-stone-900/85 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md transition-colors hover:bg-stone-900"
+              className="glass-btn-dark absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-white"
             >
               <ExternalLink size={12} strokeWidth={2.25} /> Open in new tab
             </a>
@@ -500,7 +500,7 @@ export default function ReviewOverlay({
             onClick={onBack}
             title={`Back to ${project.name}`}
             aria-label={`Back to ${project.name}`}
-            className="pointer-events-auto absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900/85 text-white backdrop-blur-md transition-colors hover:bg-stone-900"
+            className="glass-btn-dark pointer-events-auto absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full text-white"
           >
             <ArrowLeft size={16} strokeWidth={2.25} />
           </button>
@@ -523,8 +523,8 @@ export default function ReviewOverlay({
               title={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
               aria-label={sidebarOpen ? 'Hide version details' : 'Show version details & comments'}
               aria-pressed={sidebarOpen}
-              className={`flex h-9 w-9 flex-none items-center justify-center rounded-full backdrop-blur-md transition-colors ${
-                sidebarOpen ? 'bg-white text-stone-900' : 'bg-stone-900/85 text-stone-200 hover:bg-stone-900 hover:text-white'
+              className={`flex h-9 w-9 flex-none items-center justify-center rounded-full transition-colors ${
+                sidebarOpen ? 'glass-btn-primary' : 'glass-btn-dark text-stone-200 hover:text-white'
               }`}
             >
               {sidebarOpen ? <PanelRightClose size={16} strokeWidth={2.25} /> : <PanelRightOpen size={16} strokeWidth={2.25} />}

@@ -163,7 +163,7 @@ export default function SignInScreen({ onSignIn }) {
           <button
             type="submit"
             disabled={!canSubmit || submitting}
-            className="mt-4 w-full rounded-full bg-stone-800 py-2.5 text-[13px] font-medium text-white transition-opacity disabled:opacity-40"
+            className="glass-btn-primary mt-4 w-full rounded-full py-2.5 text-[13px] font-medium disabled:opacity-40"
           >
             {submitting ? 'Please wait…' : mode === 'signin' ? 'Enter the Grove' : 'Plant your Grove'}
           </button>

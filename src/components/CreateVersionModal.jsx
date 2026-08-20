@@ -246,7 +246,7 @@ export default function CreateVersionModal({ suggestedLabel, version, onCreate, 
           <button
             type="submit"
             disabled={!canSubmit}
-            className="rounded-full bg-stone-800 px-4 py-1.5 text-[14px] font-medium text-white transition-opacity disabled:opacity-40"
+            className="glass-btn-primary rounded-full px-4 py-1.5 text-[14px] font-medium disabled:opacity-40"
           >
             {isEditing ? 'Save changes' : 'Create version'}
           </button>

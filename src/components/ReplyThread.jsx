@@ -70,7 +70,7 @@ function ReplyNode({ reply, onAddReply, readOnly }) {
             type="submit"
             disabled={!draft.trim()}
             aria-label="Send reply"
-            className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-stone-800 text-white transition-opacity disabled:opacity-30"
+            className="glass-btn-primary flex h-6 w-6 flex-none items-center justify-center rounded-full transition-opacity disabled:opacity-30"
           >
             <Send size={11} strokeWidth={2.5} />
           </button>
@@ -127,7 +127,7 @@ export default function ReplyThread({ replies, onAddReply, readOnly, compact }) 
             type="submit"
             disabled={!draft.trim()}
             aria-label="Send reply"
-            className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-stone-800 text-white transition-opacity disabled:opacity-30"
+            className="glass-btn-primary flex h-6 w-6 flex-none items-center justify-center rounded-full transition-opacity disabled:opacity-30"
           >
             <Send size={11} strokeWidth={2.5} />
           </button>
