@@ -63,8 +63,31 @@ const OVERCAST = { top: '#B7B9BD', bottom: '#9AA0A6', fog: '#A9ADB2', hemiSky: '
 const RAIN = { top: '#5C6670', bottom: '#4A535C', fog: '#5C6670', hemiSky: '#6B7480', hemiGround: '#3A4048' };
 const SNOW = { top: '#DCE6EC', bottom: '#C7D3DA', fog: '#D8E2E8', hemiSky: '#E8EFF3', hemiGround: '#AEB9C0' };
 const HAZE = { top: '#F2D9A8', bottom: '#E8C48A', fog: '#EFCB98', hemiSky: '#F5DDB0', hemiGround: '#C9A96E' };
+// True low-visibility fog — pale, desaturated, near-white — distinct from
+// HAZE above, which is a warm golden-hour cosmetic rather than a real
+// weather condition.
+const FOG = { top: '#D9DCDD', bottom: '#C7CBCC', fog: '#D3D6D7', hemiSky: '#E6E8E9', hemiGround: '#AEB2B3' };
+// A dry, dusty tint for "windy" — nothing precipitating, just a slightly
+// hazy, warm-gray cast (see WindDebris in WeatherEffects.jsx for the actual
+// blowing-debris particles).
+const WINDY = { top: '#D8D6C9', bottom: '#C7C4B2', fog: '#D0CDBE', hemiSky: '#E2DFCF', hemiGround: '#AFAB94' };
+// A dark, storm-green-gray sky for thunderstorm — noticeably heavier than
+// plain rain, since this is meant to read as the severe case.
+const THUNDER = { top: '#3A4048', bottom: '#2C3138', fog: '#3A4048', hemiSky: '#454C56', hemiGround: '#20242A' };
+// Snow's cold tint pushed further and bluer — blizzard is snow turned up,
+// not a different mood.
+const BLIZZARD = { top: '#C9D6DE', bottom: '#AFC0CA', fog: '#C2CFD6', hemiSky: '#D8E3E8', hemiGround: '#8FA0AA' };
 
-const WEATHER_TINTS = { overcast: [OVERCAST, 0.55], rain: [RAIN, 0.7], snow: [SNOW, 0.5], haze: [HAZE, 0.45] };
+const WEATHER_TINTS = {
+  overcast: [OVERCAST, 0.55],
+  rain: [RAIN, 0.7],
+  snow: [SNOW, 0.5],
+  haze: [HAZE, 0.45],
+  fog: [FOG, 0.62],
+  windy: [WINDY, 0.35],
+  thunderstorm: [THUNDER, 0.8],
+  blizzard: [BLIZZARD, 0.65],
+};
 
 // Continuous blend driven by `elevation` (-1..1) — no hard cuts between
 // phases. `warmth` peaks within ~20° of the horizon (sunrise/sunset) and

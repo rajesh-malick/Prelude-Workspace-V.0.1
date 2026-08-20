@@ -51,7 +51,8 @@ export default async function handler(req, res) {
     if (avatarUrl && avatarUrl.length > MAX_AVATAR_BYTES) {
       return res.status(400).json({ error: 'That image is too large — try a smaller photo.' });
     }
-    if (weatherMode !== undefined && !['clear', 'overcast', 'rain', 'snow', 'haze', 'auto'].includes(weatherMode)) {
+    const VALID_WEATHER_MODES = ['clear', 'overcast', 'rain', 'snow', 'haze', 'fog', 'windy', 'thunderstorm', 'blizzard', 'auto'];
+    if (weatherMode !== undefined && !VALID_WEATHER_MODES.includes(weatherMode)) {
       return res.status(400).json({ error: 'Unrecognized weather mode.' });
     }
 

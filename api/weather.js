@@ -1,39 +1,32 @@
 import { getSessionUser } from './_lib/session.js';
 
 // WMO weather codes (used by Open-Meteo, and the standard the aviation/met
-// world shares) collapsed down to the handful of moods the Grove sky
-// actually renders differently. Anything not listed here (rare/unused
-// codes) falls back to 'clear' rather than erroring.
-const CODE_TO_CATEGORY = {
-  0: 'clear',
-  1: 'clear',
-  2: 'overcast',
-  3: 'overcast',
-  45: 'haze',
-  48: 'haze',
-  51: 'rain',
-  53: 'rain',
-  55: 'rain',
-  56: 'rain',
-  57: 'rain',
-  61: 'rain',
-  63: 'rain',
-  65: 'rain',
-  66: 'rain',
-  67: 'rain',
-  71: 'snow',
-  73: 'snow',
-  75: 'snow',
-  77: 'snow',
-  80: 'rain',
-  81: 'rain',
-  82: 'rain',
-  85: 'snow',
-  86: 'snow',
-  95: 'rain',
-  96: 'rain',
-  99: 'rain',
-};
+// world shares), grouped into the moods the Grove sky actually renders
+// differently. No code here means "tornado" or "hurricane" — those are
+// large-scale storm systems, not something a point-in-time current-
+// conditions reading captures, so there's nothing to map them from even if
+// the Grove had a visual for them.
+const THUNDER_CODES = new Set([95, 96, 99]);
+const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
+const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]);
+const FOG_CODES = new Set([45, 48]);
+const OVERCAST_CODES = new Set([2, 3]);
+
+// Open-Meteo's weather_code alone has no concept of "windy" or "blizzard"
+// — those need actual wind speed, which is a separate field. Fresh-breeze-
+// and-up (~32 km/h, roughly Beaufort 5) is where it starts visually reading
+// as windy rather than just a bit breezy.
+const WINDY_THRESHOLD_KMH = 32;
+
+function resolveCategory(code, windKmh) {
+  if (THUNDER_CODES.has(code)) return 'thunderstorm';
+  if (SNOW_CODES.has(code)) return windKmh >= WINDY_THRESHOLD_KMH ? 'blizzard' : 'snow';
+  if (RAIN_CODES.has(code)) return 'rain';
+  if (FOG_CODES.has(code)) return 'fog';
+  if (windKmh >= WINDY_THRESHOLD_KMH) return 'windy';
+  if (OVERCAST_CODES.has(code)) return 'overcast';
+  return 'clear';
+}
 
 // A free, keyless weather provider (Open-Meteo) — no API key to set up or
 // leak, which matters here since this is an internal tool with no ops
@@ -58,14 +51,15 @@ export default async function handler(req, res) {
     if (!place) return res.status(404).json({ error: `Couldn't find "${city}".` });
 
     const forecastRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=weather_code`
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=weather_code,wind_speed_10m&wind_speed_unit=kmh`
     );
     if (!forecastRes.ok) throw new Error(`forecast ${forecastRes.status}`);
     const forecastData = await forecastRes.json();
     const code = forecastData.current?.weather_code;
+    const windKmh = forecastData.current?.wind_speed_10m ?? 0;
 
     return res.status(200).json({
-      category: CODE_TO_CATEGORY[code] ?? 'clear',
+      category: resolveCategory(code, windKmh),
       resolvedCity: [place.name, place.admin1, place.country].filter(Boolean).join(', '),
     });
   } catch (err) {

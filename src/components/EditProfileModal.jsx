@@ -10,8 +10,12 @@ const WEATHER_OPTIONS = [
   { value: 'clear', label: 'Clear' },
   { value: 'overcast', label: 'Overcast' },
   { value: 'rain', label: 'Rain' },
+  { value: 'windy', label: 'Windy' },
   { value: 'snow', label: 'Snow' },
+  { value: 'fog', label: 'Fog' },
   { value: 'haze', label: 'Golden haze' },
+  { value: 'thunderstorm', label: 'Thunderstorm' },
+  { value: 'blizzard', label: 'Blizzard' },
 ];
 
 export default function EditProfileModal({

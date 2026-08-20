@@ -10,13 +10,17 @@ const MOON = '#7FA8D9';
 // Sun mostly hidden behind cloud (overcast/rain/snow) reads as flatter,
 // dimmer light and a nearer fog wall — haze scatters light instead of
 // blocking it, so it dims less but pulls fog in the most.
-const LIGHT_DAMPEN = { overcast: 0.65, rain: 0.5, snow: 0.7, haze: 0.85 };
+const LIGHT_DAMPEN = { overcast: 0.65, rain: 0.5, snow: 0.7, haze: 0.85, fog: 0.75, windy: 0.9, thunderstorm: 0.4, blizzard: 0.55 };
 const FOG_RANGE = {
   clear: [8, 22],
   overcast: [7, 18],
   rain: [6, 15],
   snow: [7, 17],
   haze: [4, 14],
+  fog: [3, 9],
+  windy: [8, 20],
+  thunderstorm: [5, 13],
+  blizzard: [4, 11],
 };
 
 // Sun by day, moon by night — one directional light, continuously
