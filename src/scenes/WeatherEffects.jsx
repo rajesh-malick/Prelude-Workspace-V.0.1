@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
 function hash(seed) {
   const x = Math.sin(seed * 12.9898) * 43758.5453;
@@ -224,26 +225,94 @@ function CloudCeiling({ weather }) {
   );
 }
 
-// A bright, fast-decaying point light overhead firing at random intervals —
-// cheap and reads as lightning without any actual bolt geometry, which
-// would need a lot more work to look right than a flash does.
+const BOLT_POINTS = 10;
+const BOLT_TOP_Y = 9;
+const MAX_LIGHT_INTENSITY = 9;
+
+// A jagged fork from cloud-height down to the ground, in place rather than
+// a fresh geometry each strike — mutating the same buffer (same pattern as
+// Precipitation above) avoids leaking a new BufferAttribute/GPU buffer on
+// every single flash, which would add up over a long thunderstorm session.
+function writeBoltPoints(array, originX, originZ) {
+  let x = originX;
+  for (let i = 0; i < BOLT_POINTS; i++) {
+    const y = BOLT_TOP_Y * (1 - i / (BOLT_POINTS - 1));
+    array[i * 3] = x;
+    array[i * 3 + 1] = y;
+    array[i * 3 + 2] = originZ;
+    x += (Math.random() - 0.5) * 0.8;
+  }
+}
+
+// Three coordinated pieces, all driven by one flash timer: an overhead
+// point light (ambient glow on the scene), a visible jagged bolt geometry
+// positioned freshly each strike, and a plane stuck directly in front of
+// the camera that washes the view toward white — a single point light
+// alone barely reads as lightning; the whole-view flash is what actually
+// sells "the sky just lit up". Real strikes often flicker 2-3 times in
+// quick succession rather than one clean flash — occasionally schedules a
+// smaller second flicker ~100-250ms after the first for the same reason.
 function Lightning() {
   const lightRef = useRef();
+  const boltRef = useRef();
+  const flashPlaneRef = useRef();
   const sinceFlash = useRef(0);
-  const nextFlash = useRef(2 + Math.random() * 4);
+  const nextFlash = useRef(1.5 + Math.random() * 3);
+  const boltVisibleUntil = useRef(-1);
+  const flicker = useRef(null);
+  const { camera } = useThree();
+  const camDir = useRef(new THREE.Vector3());
+  const boltPositions = useMemo(() => new Float32Array(BOLT_POINTS * 3), []);
 
-  useFrame((_, delta) => {
+  const strike = (intensity, t) => {
+    if (lightRef.current) lightRef.current.intensity = intensity;
+    boltVisibleUntil.current = t + 0.1;
+    writeBoltPoints(boltPositions, (Math.random() - 0.5) * 7, (Math.random() - 0.5) * 7);
+    if (boltRef.current) boltRef.current.geometry.attributes.position.needsUpdate = true;
+  };
+
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
     sinceFlash.current += delta;
+
     if (sinceFlash.current > nextFlash.current) {
       sinceFlash.current = 0;
-      nextFlash.current = 3 + Math.random() * 7;
-      if (lightRef.current) lightRef.current.intensity = 7;
+      nextFlash.current = 2 + Math.random() * 5;
+      strike(MAX_LIGHT_INTENSITY, t);
+      flicker.current = Math.random() < 0.5 ? { at: t + 0.1 + Math.random() * 0.15, done: false } : null;
+    } else if (flicker.current && !flicker.current.done && t >= flicker.current.at) {
+      flicker.current.done = true;
+      strike(MAX_LIGHT_INTENSITY * 0.6, t);
     } else if (lightRef.current && lightRef.current.intensity > 0) {
-      lightRef.current.intensity = Math.max(0, lightRef.current.intensity - delta * 14);
+      lightRef.current.intensity = Math.max(0, lightRef.current.intensity - delta * 20);
+    }
+
+    if (boltRef.current) boltRef.current.visible = t < boltVisibleUntil.current;
+
+    if (flashPlaneRef.current) {
+      const amount = lightRef.current ? Math.min(1, lightRef.current.intensity / MAX_LIGHT_INTENSITY) : 0;
+      camera.getWorldDirection(camDir.current);
+      flashPlaneRef.current.position.copy(camera.position).addScaledVector(camDir.current, 2);
+      flashPlaneRef.current.quaternion.copy(camera.quaternion);
+      flashPlaneRef.current.material.opacity = amount * 0.55;
     }
   });
 
-  return <pointLight ref={lightRef} position={[0, 13, 0]} intensity={0} color="#EAF0FF" distance={45} />;
+  return (
+    <>
+      <pointLight ref={lightRef} position={[0, 13, 0]} intensity={0} color="#EAF0FF" distance={45} />
+      <line ref={boltRef} visible={false}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" count={BOLT_POINTS} array={boltPositions} itemSize={3} />
+        </bufferGeometry>
+        <lineBasicMaterial color="#F5F8FF" toneMapped={false} />
+      </line>
+      <mesh ref={flashPlaneRef} renderOrder={999}>
+        <planeGeometry args={[30, 30]} />
+        <meshBasicMaterial color="#EAF0FF" transparent opacity={0} depthTest={false} depthWrite={false} toneMapped={false} />
+      </mesh>
+    </>
+  );
 }
 
 export default function WeatherEffects({ weather }) {
