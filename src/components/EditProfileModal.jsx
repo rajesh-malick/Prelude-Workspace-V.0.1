@@ -88,7 +88,7 @@ export default function EditProfileModal({
         transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
-        className="glass-surface w-[380px] rounded-2xl p-5"
+        className="glass-surface max-h-[85vh] w-[380px] overflow-y-auto rounded-2xl p-5"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-[16px] font-semibold text-stone-800">Edit profile</h3>
