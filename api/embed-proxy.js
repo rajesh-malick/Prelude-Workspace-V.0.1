@@ -105,6 +105,59 @@ async function fetchFollowingRedirects(startUrl) {
   throw new Error('Too many redirects.');
 }
 
+// Heavy client-side apps (Airbnb, Sketchfab, most modern SaaS product
+// pages) ship an almost-empty HTML shell and fetch their real content from
+// their own private APIs after load — calls that get blocked once this
+// document is served from our origin instead of theirs (ordinary CORS,
+// nothing this proxy can do about it). Login-walled pages (LinkedIn posts,
+// most social platforms) render plenty of real HTML but it's the wall
+// itself, not the content. Neither is a "can't reach the site" error, so
+// there's nothing to retry — this is a genuine dead end worth saying so
+// plainly about rather than serving a blank-looking iframe.
+//
+// Both heuristics below are inherently fuzzy best-effort guesses, not a
+// real detector — a short but perfectly real page (a one-line "coming
+// soon") could trip the length check, and the phrase check only catches
+// wording actually seen in testing. Good enough to catch the common cases
+// without false-flagging most real content.
+const MIN_TEXT_CHARS = 800;
+const LOGIN_WALL_PATTERN = /\b(sign in|log in|create (a |an )?account|join (linkedin|now|to (view|continue))|subscribe to (continue|read)|enable javascript)\b/i;
+
+function extractVisibleText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function looksUnrenderable(visibleText) {
+  if (visibleText.length < MIN_TEXT_CHARS) return true;
+  return LOGIN_WALL_PATTERN.test(visibleText.slice(0, 400));
+}
+
+function unrenderableFallbackHtml(originalUrl) {
+  let hostname;
+  try {
+    hostname = new URL(originalUrl).hostname;
+  } catch {
+    hostname = originalUrl;
+  }
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>
+    body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#F3E9D8;font-family:system-ui,-apple-system,sans-serif;color:#57534e;text-align:center;padding:24px;box-sizing:border-box}
+    .card{max-width:340px}
+    p{font-size:14px;line-height:1.5;margin:0 0 16px}
+    a{display:inline-flex;align-items:center;gap:6px;background:#292524;color:#fff;padding:8px 16px;border-radius:999px;text-decoration:none;font-size:13px;font-weight:600}
+    a:hover{opacity:.9}
+  </style></head><body>
+    <div class="card">
+      <p>This page needs its own login or JavaScript to display content — it can't be shown here.</p>
+      <a href="${originalUrl}" target="_blank" rel="noopener noreferrer">Open ${hostname} in a new tab</a>
+    </div>
+  </body></html>`;
+}
+
 async function readCapped(response) {
   const reader = response.body.getReader();
   const chunks = [];
@@ -147,6 +200,12 @@ export default async function handler(req, res) {
     }
 
     let html = await readCapped(response);
+
+    if (looksUnrenderable(extractVisibleText(html))) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).send(unrenderableFallbackHtml(target));
+    }
 
     // Some sites additionally set framing restrictions via a <meta> tag
     // rather than (or alongside) the HTTP header — the header itself is
