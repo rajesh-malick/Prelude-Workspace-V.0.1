@@ -22,13 +22,12 @@ function useMinimapPoints(projects) {
   }, [projects]);
 }
 
-// Fixed top-right, same corner as the reference screenshots this whole
-// visual pass has been chasing (Cities: Skylines / Clash of Clans both
-// dock their overview map here). Sits below Header's own top-right controls
-// (TerritorySwitcher/ModeToggle/New project) and only shows during the free
-// Grove overview — the same `!destination` moment OrbitControls itself is
-// live for (see `allowOrbit` in App.jsx) — since a scripted camera flight
-// into a tree or bloom has nowhere left to navigate to.
+// Fixed bottom-right — clear of NavDock (bottom-center) and everything
+// anchored to the top-right corner (Header's TerritorySwitcher/ModeToggle/
+// New project, ProjectOverlay). Only shows during the free Grove overview —
+// the same `!destination` moment OrbitControls itself is live for (see
+// `allowOrbit` in App.jsx) — since a scripted camera flight into a tree or
+// bloom has nowhere left to navigate to.
 export default function Minimap({ projects, hoveredId, onSelect }) {
   const [collapsed, setCollapsed] = useState(false);
   const points = useMinimapPoints(projects);
@@ -42,7 +41,7 @@ export default function Minimap({ projects, hoveredId, onSelect }) {
         onClick={() => setCollapsed(false)}
         title="Show map"
         aria-label="Show map"
-        className="glass-surface fixed right-6 top-24 z-20 flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition-colors hover:text-stone-800"
+        className="glass-surface fixed bottom-6 right-6 z-20 flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition-colors hover:text-stone-800"
       >
         <Map size={16} strokeWidth={2} />
       </button>
@@ -50,7 +49,7 @@ export default function Minimap({ projects, hoveredId, onSelect }) {
   }
 
   return (
-    <div className="glass-surface fixed right-6 top-24 z-20 w-[168px] rounded-2xl p-2.5">
+    <div className="glass-surface fixed bottom-6 right-6 z-20 w-[168px] rounded-2xl p-2.5">
       <div className="flex items-center justify-between px-0.5">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">Grove map</span>
         <button
