@@ -150,6 +150,12 @@ async function saveProfile(payload) {
   return res.json();
 }
 
+async function fetchWeather(city) {
+  const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`, { credentials: 'include' });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Fire-and-forget — a failed delivery (network hiccup, recipient deleted
 // their account) shouldn't block or error out the visit itself.
 function notify(toEmail, text) {
@@ -298,10 +304,16 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [villageOpen, setVillageOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
-  // Bio/avatar/village color — everything else about "who am I" (name,
-  // email) already lives on `session`.
-  const [profile, setProfile] = useState({ bio: '', avatarUrl: null, villageColor: null });
+  // Bio/avatar/village color/weather preference — everything else about
+  // "who am I" (name, email) already lives on `session`.
+  const [profile, setProfile] = useState({ bio: '', avatarUrl: null, villageColor: null, weatherMode: null, weatherCity: null });
   const [profileLoadedFor, setProfileLoadedFor] = useState(null);
+  // The actual mood the Grove sky renders — either the fixed cosmetic
+  // preset from `profile.weatherMode` directly, or, when it's 'auto', real
+  // current conditions resolved for `profile.weatherCity` (see fetchWeather
+  // below). Defaults to 'clear' — identical to the sky before this feature
+  // existed — until a preference loads or a fetch resolves.
+  const [weatherCategory, setWeatherCategory] = useState('clear');
   const [soundOn, setSoundOn] = useState(true);
   // An email, or null for "my own Grove" — every other account at the
   // company is a real, browsable territory (see /api/territories), not a
@@ -326,7 +338,7 @@ export default function App() {
   const [lastSeenNotificationCount, setLastSeenNotificationCount] = useState(0);
   const cameraRigRef = useRef(null);
   const germinationTimeoutRef = useRef(null);
-  const { hour, elevation, sky } = useTimeOfDay();
+  const { hour, elevation, sky } = useTimeOfDay(weatherCategory);
   const isNight = getPhase(hour) === 'night';
 
   // Real birds go quiet and out of sight after dark — chirping (and the
@@ -339,13 +351,49 @@ export default function App() {
     let cancelled = false;
     fetchProfile().then((loaded) => {
       if (cancelled || !loaded) return;
-      setProfile({ bio: loaded.bio ?? '', avatarUrl: loaded.avatarUrl ?? null, villageColor: loaded.villageColor ?? null });
+      setProfile({
+        bio: loaded.bio ?? '',
+        avatarUrl: loaded.avatarUrl ?? null,
+        villageColor: loaded.villageColor ?? null,
+        weatherMode: loaded.weatherMode ?? null,
+        weatherCity: loaded.weatherCity ?? null,
+      });
       setProfileLoadedFor(session.email);
     });
     return () => {
       cancelled = true;
     };
   }, [session, profileLoadedFor]);
+
+  // Resolves `profile.weatherMode` down to the actual mood the sky renders.
+  // A fixed preset applies directly and instantly; 'auto' means "go look up
+  // the real weather for weatherCity" — fetched once here and again every
+  // 30 minutes (real weather doesn't change fast enough to justify anything
+  // closer to useTimeOfDay's once-a-minute clock tick), falling back to
+  // 'clear' while that's loading or if the city can't be resolved rather
+  // than leaving the last city's weather stuck on screen.
+  useEffect(() => {
+    if (profile.weatherMode && profile.weatherMode !== 'auto') {
+      setWeatherCategory(profile.weatherMode);
+      return;
+    }
+    if (profile.weatherMode !== 'auto' || !profile.weatherCity) {
+      setWeatherCategory('clear');
+      return;
+    }
+    let cancelled = false;
+    const resolve = () => {
+      fetchWeather(profile.weatherCity).then((data) => {
+        if (!cancelled) setWeatherCategory(data?.category ?? 'clear');
+      });
+    };
+    resolve();
+    const id = setInterval(resolve, 30 * 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [profile.weatherMode, profile.weatherCity]);
 
   useEffect(() => {
     if (!session?.email || territoriesLoadedFor === session.email) return;
@@ -519,7 +567,13 @@ export default function App() {
       const result = await saveProfile(payload);
       if (result.error) return;
       setSession((prev) => (prev ? { ...prev, name: result.name } : prev));
-      setProfile({ bio: result.bio ?? '', avatarUrl: result.avatarUrl ?? null, villageColor: result.villageColor ?? null });
+      setProfile({
+        bio: result.bio ?? '',
+        avatarUrl: result.avatarUrl ?? null,
+        villageColor: result.villageColor ?? null,
+        weatherMode: result.weatherMode ?? null,
+        weatherCity: result.weatherCity ?? null,
+      });
       setEditingProfile(false);
     },
     []
@@ -1087,6 +1141,7 @@ export default function App() {
             elevation={elevation}
             sky={sky}
             isNight={isNight}
+            weather={weatherCategory}
           />
           <CameraRig
             ref={cameraRigRef}
@@ -1293,6 +1348,8 @@ export default function App() {
             bio={profile.bio}
             avatarUrl={profile.avatarUrl}
             villageColor={profile.villageColor}
+            weatherMode={profile.weatherMode}
+            weatherCity={profile.weatherCity}
             onSave={handleSaveProfile}
             onClose={() => setEditingProfile(false)}
           />

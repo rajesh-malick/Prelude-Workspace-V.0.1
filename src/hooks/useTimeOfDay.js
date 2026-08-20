@@ -6,8 +6,10 @@ function readHour() {
 }
 
 // Refreshes once a minute — plenty for a light that's supposed to drift
-// like a real sky, not a clock anyone is staring at.
-export default function useTimeOfDay() {
+// like a real sky, not a clock anyone is staring at. `weather` ('clear' |
+// 'overcast' | 'rain' | 'snow' | 'haze') tints the resulting sky on top of
+// the time-of-day gradient — see getSkyColors.
+export default function useTimeOfDay(weather) {
   const [hour, setHour] = useState(() => readHour());
 
   useEffect(() => {
@@ -16,5 +18,5 @@ export default function useTimeOfDay() {
   }, []);
 
   const elevation = getSunElevation(hour);
-  return { hour, elevation, phase: getPhase(hour), sky: getSkyColors(elevation) };
+  return { hour, elevation, phase: getPhase(hour), sky: getSkyColors(elevation, weather) };
 }

@@ -6,11 +6,30 @@ import Avatar from './Avatar';
 const COLOR_OPTIONS = ['#4E9A5C', '#C98A2E', '#3E7FB0', '#8B6FB0', '#C9638A', '#3E9A9A'];
 const MAX_AVATAR_BYTES = 900_000;
 
-export default function EditProfileModal({ name: initialName, bio: initialBio, avatarUrl: initialAvatarUrl, villageColor: initialVillageColor, onSave, onClose }) {
+const WEATHER_OPTIONS = [
+  { value: 'clear', label: 'Clear' },
+  { value: 'overcast', label: 'Overcast' },
+  { value: 'rain', label: 'Rain' },
+  { value: 'snow', label: 'Snow' },
+  { value: 'haze', label: 'Golden haze' },
+];
+
+export default function EditProfileModal({
+  name: initialName,
+  bio: initialBio,
+  avatarUrl: initialAvatarUrl,
+  villageColor: initialVillageColor,
+  weatherMode: initialWeatherMode,
+  weatherCity: initialWeatherCity,
+  onSave,
+  onClose,
+}) {
   const [name, setName] = useState(initialName ?? '');
   const [bio, setBio] = useState(initialBio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl ?? null);
   const [villageColor, setVillageColor] = useState(initialVillageColor ?? null);
+  const [weatherMode, setWeatherMode] = useState(initialWeatherMode ?? 'clear');
+  const [weatherCity, setWeatherCity] = useState(initialWeatherCity ?? '');
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -39,7 +58,18 @@ export default function EditProfileModal({ name: initialName, bio: initialBio, a
       setError('Name cannot be empty.');
       return;
     }
-    onSave({ name: name.trim(), bio: bio.trim(), avatarUrl, villageColor });
+    if (weatherMode === 'auto' && !weatherCity.trim()) {
+      setError('Add a city for automatic weather, or pick a fixed one instead.');
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      bio: bio.trim(),
+      avatarUrl,
+      villageColor,
+      weatherMode,
+      weatherCity: weatherCity.trim(),
+    });
   };
 
   return (
@@ -140,6 +170,43 @@ export default function EditProfileModal({ name: initialName, bio: initialBio, a
             />
           ))}
         </div>
+
+        <label className="mt-3 block text-[11.5px] font-medium text-stone-600">Grove weather</label>
+        <p className="mt-0.5 text-[11px] text-stone-500">
+          Layers onto the sky's usual day/night lighting — pick a fixed mood, or let it auto-track a real city.
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 rounded-lg bg-black/5 p-1">
+          {WEATHER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setWeatherMode(opt.value)}
+              className={`rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+                weatherMode === opt.value ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setWeatherMode('auto')}
+            className={`rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+              weatherMode === 'auto' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            Auto (real weather)
+          </button>
+        </div>
+        {weatherMode === 'auto' && (
+          <input
+            type="text"
+            value={weatherCity}
+            onChange={(e) => setWeatherCity(e.target.value)}
+            placeholder="City — e.g. Chennai"
+            className="mt-1.5 w-full rounded-lg bg-black/5 px-3 py-2 text-[13px] text-stone-800 outline-none placeholder:text-stone-500 focus:bg-black/[0.07]"
+          />
+        )}
 
         {error && <p className="mt-2 text-[12px] text-red-500">{error}</p>}
 

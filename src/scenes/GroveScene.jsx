@@ -22,10 +22,11 @@ export default function GroveScene({
   elevation,
   sky,
   isNight,
+  weather,
 }) {
   return (
     <>
-      <SkyLighting elevation={elevation} sky={sky} />
+      <SkyLighting elevation={elevation} sky={sky} weather={weather} />
 
       {/* Ground — extends well past the clearing so there's real ground
           under the background tree line (see ForestFloor) instead of a

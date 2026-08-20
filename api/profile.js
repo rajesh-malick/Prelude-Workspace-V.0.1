@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const rows = await sql`SELECT name, bio, avatar_url, village_color FROM users WHERE email = ${user.email}`;
+      const rows = await sql`SELECT name, bio, avatar_url, village_color, weather_mode, weather_city FROM users WHERE email = ${user.email}`;
       if (rows.length === 0) {
         return res.status(401).json({ error: 'Your session refers to an account that no longer exists. Please sign in again.' });
       }
@@ -22,6 +22,8 @@ export default async function handler(req, res) {
         bio: row.bio ?? '',
         avatarUrl: row.avatar_url,
         villageColor: row.village_color,
+        weatherMode: row.weather_mode,
+        weatherCity: row.weather_city,
       });
     } catch (err) {
       console.error('GET /api/profile error', err);
@@ -40,12 +42,17 @@ export default async function handler(req, res) {
     const bio = typeof body.bio === 'string' ? body.bio.trim().slice(0, 280) : undefined;
     const avatarUrl = typeof body.avatarUrl === 'string' ? body.avatarUrl : undefined;
     const villageColor = typeof body.villageColor === 'string' ? body.villageColor : undefined;
+    const weatherMode = typeof body.weatherMode === 'string' ? body.weatherMode : undefined;
+    const weatherCity = typeof body.weatherCity === 'string' ? body.weatherCity.trim().slice(0, 100) : undefined;
 
     if (name !== undefined && !name) {
       return res.status(400).json({ error: 'Name cannot be empty.' });
     }
     if (avatarUrl && avatarUrl.length > MAX_AVATAR_BYTES) {
       return res.status(400).json({ error: 'That image is too large — try a smaller photo.' });
+    }
+    if (weatherMode !== undefined && !['clear', 'overcast', 'rain', 'snow', 'haze', 'auto'].includes(weatherMode)) {
+      return res.status(400).json({ error: 'Unrecognized weather mode.' });
     }
 
     try {
@@ -55,9 +62,11 @@ export default async function handler(req, res) {
           name = COALESCE(${name ?? null}, name),
           bio = COALESCE(${bio ?? null}, bio),
           avatar_url = CASE WHEN ${avatarUrl !== undefined} THEN ${avatarUrl ?? null} ELSE avatar_url END,
-          village_color = CASE WHEN ${villageColor !== undefined} THEN ${villageColor ?? null} ELSE village_color END
+          village_color = CASE WHEN ${villageColor !== undefined} THEN ${villageColor ?? null} ELSE village_color END,
+          weather_mode = CASE WHEN ${weatherMode !== undefined} THEN ${weatherMode ?? null} ELSE weather_mode END,
+          weather_city = CASE WHEN ${weatherCity !== undefined} THEN ${weatherCity || null} ELSE weather_city END
         WHERE email = ${user.email}
-        RETURNING name, bio, avatar_url, village_color
+        RETURNING name, bio, avatar_url, village_color, weather_mode, weather_city
       `;
       if (rows.length === 0) {
         return res.status(401).json({ error: 'Your session refers to an account that no longer exists. Please sign in again.' });
@@ -72,6 +81,8 @@ export default async function handler(req, res) {
         bio: row.bio ?? '',
         avatarUrl: row.avatar_url,
         villageColor: row.village_color,
+        weatherMode: row.weather_mode,
+        weatherCity: row.weather_city,
       });
     } catch (err) {
       console.error('PUT /api/profile error', err);

@@ -55,17 +55,32 @@ const NIGHT = { top: '#0B1226', bottom: '#1B2A4A', fog: '#1B2A4A', hemiSky: '#2A
 const DAY = { top: '#FDF6EC', bottom: '#F3E9D8', fog: '#F3E9D8', hemiSky: '#FFF3DC', hemiGround: '#C9B89A' };
 const HORIZON = { top: '#F7C99A', bottom: '#D97A5C', fog: '#E2926E', hemiSky: '#FFC79A', hemiGround: '#8A5A4E' };
 
+// Weather tints layered on top of the time-of-day blend above — same idea,
+// a color-stop set per mood, lerped in at a fixed strength rather than
+// replacing the sky outright, so a rainy noon still reads as noon (just a
+// flatter, grayer one) instead of jumping to a flat preset color.
+const OVERCAST = { top: '#B7B9BD', bottom: '#9AA0A6', fog: '#A9ADB2', hemiSky: '#C7CBCF', hemiGround: '#7D8288' };
+const RAIN = { top: '#5C6670', bottom: '#4A535C', fog: '#5C6670', hemiSky: '#6B7480', hemiGround: '#3A4048' };
+const SNOW = { top: '#DCE6EC', bottom: '#C7D3DA', fog: '#D8E2E8', hemiSky: '#E8EFF3', hemiGround: '#AEB9C0' };
+const HAZE = { top: '#F2D9A8', bottom: '#E8C48A', fog: '#EFCB98', hemiSky: '#F5DDB0', hemiGround: '#C9A96E' };
+
+const WEATHER_TINTS = { overcast: [OVERCAST, 0.55], rain: [RAIN, 0.7], snow: [SNOW, 0.5], haze: [HAZE, 0.45] };
+
 // Continuous blend driven by `elevation` (-1..1) — no hard cuts between
 // phases. `warmth` peaks within ~20° of the horizon (sunrise/sunset) and
-// fades out toward both noon and deep night.
-export function getSkyColors(elevation) {
+// fades out toward both noon and deep night. `weather` ('clear' | undefined
+// skips the tint entirely) then nudges the whole thing toward one of the
+// moods above.
+export function getSkyColors(elevation, weather) {
   const dayAmount = (elevation + 1) / 2;
   const warmth = Math.max(0, 1 - Math.abs(elevation) / 0.35) * 0.85;
   const keys = Object.keys(NIGHT);
   const out = {};
+  const tint = WEATHER_TINTS[weather];
   keys.forEach((k) => {
     const base = lerpHex(NIGHT[k], DAY[k], dayAmount);
     out[k] = lerpHex(base, HORIZON[k], warmth);
+    if (tint) out[k] = lerpHex(out[k], tint[0][k], tint[1]);
   });
   return out;
 }

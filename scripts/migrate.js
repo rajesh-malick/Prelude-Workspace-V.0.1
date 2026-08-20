@@ -52,7 +52,17 @@ async function migrate() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS village_color TEXT
   `;
-  console.log('Migration complete: users table (with projects_data, access_grants, notifications, bio, avatar_url, village_color) is ready.');
+  // Weather customization for the Grove sky — either a fixed cosmetic
+  // preset ('clear' | 'overcast' | 'rain' | 'snow' | 'haze') or 'auto',
+  // which resolves to real current conditions for weather_city via
+  // api/weather.js. Null means "no preference set" (behaves as 'clear').
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS weather_mode TEXT
+  `;
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS weather_city TEXT
+  `;
+  console.log('Migration complete: users table (with projects_data, access_grants, notifications, bio, avatar_url, village_color, weather_mode, weather_city) is ready.');
 }
 
 migrate().catch((err) => {
