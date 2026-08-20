@@ -24,6 +24,12 @@ export default function GroveScene({
   isNight,
   weather,
 }) {
+  // How hard everything that sways/blows should move — windy is the purest
+  // case, thunderstorm and blizzard carry real wind too but a bit less of
+  // the visual budget since rain/snow and (for thunderstorm) lightning are
+  // already doing most of the "this is severe" work.
+  const windStrength = weather === 'windy' ? 1 : weather === 'thunderstorm' ? 0.6 : weather === 'blizzard' ? 0.8 : 0;
+
   return (
     <>
       <SkyLighting elevation={elevation} sky={sky} weather={weather} />
@@ -39,7 +45,7 @@ export default function GroveScene({
       {/* Forest ambience — grass, leaf litter, stones and undergrowth
           across the clearing, ringed by a wall of background trees so the
           Grove reads as a clearing IN a forest, not a lot on its own */}
-      <ForestFloor />
+      <ForestFloor windStrength={windStrength} />
       <AmbientLife reducedMotion={reducedMotion} isNight={isNight} />
 
       {projects.length === 0 ? (
@@ -58,6 +64,7 @@ export default function GroveScene({
             justPlanted={project.id === justPlantedId}
             reducedMotion={reducedMotion}
             showNameTag={showNameTags}
+            windStrength={windStrength}
           />
         ))
       )}

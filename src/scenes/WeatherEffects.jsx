@@ -65,28 +65,48 @@ function Precipitation({ kind }) {
 // Loose dust/leaf debris drifting sideways across the clearing at ground-ish
 // height, rather than falling — the visual signature of "windy" (see also
 // the sky's own dusty tint in getSkyColors) with nothing actually falling
-// from the sky.
+// from the sky. Colored per-particle from a leaf-ish palette (matching the
+// canopy colors in Tree.jsx) rather than one flat dust tone, and bobbing
+// up and down as it crosses — reads as tumbling leaves, not a sandstorm.
+const DEBRIS_COLORS = [
+  [0.42, 0.56, 0.28], // '#6B8F47'
+  [0.5, 0.63, 0.31], // '#7FA050'
+  [0.72, 0.66, 0.36], // dry leaf tan
+  [0.79, 0.55, 0.24], // '#C98A2E'-ish
+];
+
 function WindDebris() {
-  const count = 70;
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
+  const count = 90;
+  const [positions, colors, bobSeeds] = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const bob = new Float32Array(count * 2); // [phase, speed] per particle
     for (let i = 0; i < count; i++) {
-      arr[i * 3] = (hash(i) - 0.5) * FIELD * 2;
-      arr[i * 3 + 1] = 0.1 + hash(i + 50) * 1.4;
-      arr[i * 3 + 2] = (hash(i + 100) - 0.5) * FIELD * 2;
+      pos[i * 3] = (hash(i) - 0.5) * FIELD * 2;
+      pos[i * 3 + 1] = 0.15 + hash(i + 50) * 1.6;
+      pos[i * 3 + 2] = (hash(i + 100) - 0.5) * FIELD * 2;
+      const c = DEBRIS_COLORS[Math.floor(hash(i + 400) * DEBRIS_COLORS.length)];
+      col[i * 3] = c[0];
+      col[i * 3 + 1] = c[1];
+      col[i * 3 + 2] = c[2];
+      bob[i * 2] = hash(i + 500) * Math.PI * 2;
+      bob[i * 2 + 1] = 2 + hash(i + 600) * 2;
     }
-    return arr;
+    return [pos, col, bob];
   }, []);
   const speeds = useMemo(() => Array.from({ length: count }, (_, i) => 3 + hash(i + 300) * 3), []);
+  const baseHeights = useMemo(() => Array.from({ length: count }, (_, i) => 0.15 + hash(i + 50) * 1.6), []);
   const pointsRef = useRef();
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const posAttr = pointsRef.current?.geometry.attributes.position;
     if (!posAttr) return;
+    const t = state.clock.elapsedTime;
     for (let i = 0; i < count; i++) {
       let x = posAttr.array[i * 3] + speeds[i] * delta;
       if (x > FIELD) x = -FIELD;
       posAttr.array[i * 3] = x;
+      posAttr.array[i * 3 + 1] = baseHeights[i] + Math.sin(t * bobSeeds[i * 2 + 1] + bobSeeds[i * 2]) * 0.2;
     }
     posAttr.needsUpdate = true;
   });
@@ -95,8 +115,9 @@ function WindDebris() {
     <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-color" count={count} array={colors} itemSize={3} />
       </bufferGeometry>
-      <pointsMaterial color="#C9C08A" size={0.06} transparent opacity={0.6} sizeAttenuation depthWrite={false} />
+      <pointsMaterial vertexColors size={0.07} transparent opacity={0.75} sizeAttenuation depthWrite={false} />
     </points>
   );
 }

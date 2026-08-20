@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import RealisticGrassPatches from './RealisticFlora';
 
 // Deterministic pseudo-random in [0,1) — same trick used for tree/leaf
@@ -16,11 +17,23 @@ const BG_CANOPY_COLORS = ['#3E6B36', '#4E7A42', '#356030', '#2E5A2A'];
 const ROCK_COLOR = '#A79A87';
 const CLEARING_RADIUS = 13;
 
-function GrassTuft({ position, rotation, scale, color }) {
+function GrassTuft({ position, rotation, scale, color, windStrength = 0 }) {
   // Three thin blades fanned from one root, not one lonely spike — reads
-  // as an actual tuft of grass instead of a stray thorn.
+  // as an actual tuft of grass instead of a stray thorn. The `rotation`
+  // prop only sets the tuft's fixed orientation once (never changes across
+  // renders, so React never re-touches it) — the sway below is layered on
+  // top imperatively via rotation.z, which R3F leaves alone once mounted.
+  const ref = useRef();
+  const phase = useMemo(() => position[0] * 3.1 + position[2] * 1.7, [position]);
+
+  useFrame((state) => {
+    if (!ref.current) return;
+    const target = windStrength ? Math.sin(state.clock.elapsedTime * 3 + phase) * 0.35 * windStrength : 0;
+    ref.current.rotation.z += (target - ref.current.rotation.z) * 0.1;
+  });
+
   return (
-    <group position={position} rotation={[0, rotation, 0]} scale={scale}>
+    <group ref={ref} position={position} rotation={[0, rotation, 0]} scale={scale}>
       {[-0.35, 0, 0.35].map((lean, i) => (
         <mesh key={i} position={[lean * 0.18, 0.5, 0]} rotation={[lean * 0.9, 0, lean * 0.5]}>
           <coneGeometry args={[0.09, 1, 4]} />
@@ -91,7 +104,7 @@ function BackgroundTree({ position, scale, trunkHeight }) {
 // Scatters ambient ground detail across the whole clearing, and rings it
 // with a wall of background trees + undergrowth so the Grove reads as a
 // clearing IN a forest, not a decorated lot sitting on its own.
-export default function ForestFloor() {
+export default function ForestFloor({ windStrength = 0 }) {
   const grass = useMemo(() => {
     const list = [];
     for (let i = 0; i < 220; i++) {
@@ -194,7 +207,14 @@ export default function ForestFloor() {
   return (
     <group>
       {grass.map((g, i) => (
-        <GrassTuft key={`g${i}`} position={g.position} rotation={g.rotation} scale={g.scale} color={g.color} />
+        <GrassTuft
+          key={`g${i}`}
+          position={g.position}
+          rotation={g.rotation}
+          scale={g.scale}
+          color={g.color}
+          windStrength={windStrength}
+        />
       ))}
       {litter.map((l, i) => (
         <mesh key={`l${i}`} position={l.position} rotation={[-Math.PI / 2, 0, l.rotation]} scale={l.scale}>

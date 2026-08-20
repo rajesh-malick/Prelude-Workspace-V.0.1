@@ -41,6 +41,7 @@ export default function Tree({
   justPlanted,
   reducedMotion,
   showNameTag = true,
+  windStrength = 0,
 }) {
   const groupRef = useRef();
   const treeGroupRef = useRef();
@@ -125,6 +126,17 @@ export default function Tree({
     }
     if (treeGroupRef.current) {
       treeGroupRef.current.scale.setScalar(treeScale);
+      // A rigid whole-tree rock rather than independently flexing branches
+      // — simpler and still clearly reads as "windy" without needing to
+      // animate leaves/branches separately. Phased by idSeed so a Grove
+      // full of trees doesn't sway in unison like one solid block.
+      if (windStrength && !reducedMotion) {
+        treeGroupRef.current.rotation.z = Math.sin(t * 1.6 + idSeed) * 0.05 * windStrength;
+        treeGroupRef.current.rotation.x = Math.sin(t * 2.3 + idSeed * 1.7) * 0.02 * windStrength;
+      } else if (treeGroupRef.current.rotation.z || treeGroupRef.current.rotation.x) {
+        treeGroupRef.current.rotation.z = 0;
+        treeGroupRef.current.rotation.x = 0;
+      }
     }
     if (seedRef.current) {
       if (elapsed < delay) {
