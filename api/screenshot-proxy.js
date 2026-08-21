@@ -1,7 +1,7 @@
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 import { getSessionUser } from './_lib/session.js';
-import { assertPublicHost } from './_lib/urlSafety.js';
+import { assertPublicHost, isObviouslyPrivateHost } from './_lib/urlSafety.js';
 
 // Fallback for links the live iframe proxy (embed-proxy.js) genuinely can't
 // render — heavy client-side apps whose own API calls get blocked by CORS
@@ -19,21 +19,6 @@ import { assertPublicHost } from './_lib/urlSafety.js';
 // close; there's no session to give it.
 const NAV_TIMEOUT_MS = 15_000;
 const VIEWPORT = { width: 1280, height: 800 };
-
-function isObviouslyPrivateHost(hostname) {
-  const h = hostname.toLowerCase();
-  return (
-    h === 'localhost' ||
-    /^127\./.test(h) ||
-    /^10\./.test(h) ||
-    /^192\.168\./.test(h) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-    /^169\.254\./.test(h) ||
-    h === '::1' ||
-    /^f[cd][0-9a-f]{0,2}:/i.test(h) ||
-    /^fe80:/i.test(h)
-  );
-}
 
 export default async function handler(req, res) {
   const user = getSessionUser(req);

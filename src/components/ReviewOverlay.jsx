@@ -11,6 +11,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import Butterfly from './Butterfly';
+import PageGallery from './PageGallery';
 import ResolveToggle from './ResolveToggle';
 import ReplyThread from './ReplyThread';
 import DetailsCommentsSwitch from './DetailsCommentsSwitch';
@@ -48,7 +49,12 @@ function positionFor(comment, i) {
 // shows which is active) rather than one button whose label swapped —
 // easier to tell at a glance there even are two modes, and which one
 // you're currently in, instead of reading a single word each time.
-function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
+function ModeSwitch({ interactive, onChange, showHint, onDismissHint, galleryActive, onSelectGallery }) {
+  const hasGallery = typeof onSelectGallery === 'function';
+  const activeIndex = hasGallery && galleryActive ? 2 : interactive ? 0 : 1;
+  const optionCount = hasGallery ? 3 : 2;
+  const SLOT_WIDTH = 80;
+  const THUMB_WIDTH = 76;
   return (
     <div className="relative">
       {/* Plain CSS transform for the sliding thumb, deliberately not a
@@ -66,13 +72,22 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
           solid sliding block — both labels always visible, the inactive
           one dimmed on the dark track, the active one dark text on the
           light block. Neutral white/light rather than a literal red/green
-          on/off treatment: Cursor and Comment are two equally valid modes,
-          not a "bad" vs "good" state, so color-coding them like an on/off
-          switch would misleadingly imply one is disabled. */}
-      <div className="relative flex h-8 w-[168px] items-center rounded-lg border border-white/10 bg-stone-800 p-1 text-[11px] font-semibold">
+          on/off treatment: Cursor and Comment (and Gallery, when present)
+          are equally valid modes, not a "bad" vs "good" state, so color-
+          coding them like an on/off switch would misleadingly imply one
+          is disabled. Thumb offset is an explicit pixel translate (index *
+          slot width), not a percentage-of-self translate — the thumb is
+          deliberately narrower than a slot (a small reveal gap on each
+          side), and translating by "100% of the thumb's own width" per
+          step would drift by that gap's width with every step once there
+          are more than two slots. */}
+      <div
+        className="relative flex h-8 items-center rounded-lg border border-white/10 bg-stone-800 p-1 text-[11px] font-semibold"
+        style={{ width: optionCount * SLOT_WIDTH + 8 }}
+      >
         <span
-          className="absolute inset-y-1 left-1 w-[76px] rounded-md bg-white shadow-sm transition-transform duration-200 ease-out"
-          style={{ transform: interactive ? 'translateX(0%)' : 'translateX(100%)' }}
+          className="absolute inset-y-1 left-1 rounded-md bg-white shadow-sm transition-transform duration-200 ease-out"
+          style={{ width: THUMB_WIDTH, transform: `translateX(${activeIndex * SLOT_WIDTH}px)` }}
         />
         <button
           type="button"
@@ -81,7 +96,7 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
             onChange(true);
           }}
           className={`relative z-10 flex-1 rounded-md py-1 text-center transition-colors ${
-            interactive ? 'text-stone-900' : 'text-stone-400 hover:text-stone-200'
+            activeIndex === 0 ? 'text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           Cursor
@@ -93,11 +108,25 @@ function ModeSwitch({ interactive, onChange, showHint, onDismissHint }) {
             onChange(false);
           }}
           className={`relative z-10 flex-1 rounded-md py-1 text-center transition-colors ${
-            interactive ? 'text-stone-400 hover:text-stone-200' : 'text-stone-900'
+            activeIndex === 1 ? 'text-stone-900' : 'text-stone-400 hover:text-stone-200'
           }`}
         >
           Comment
         </button>
+        {hasGallery && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectGallery();
+            }}
+            className={`relative z-10 flex-1 rounded-md py-1 text-center transition-colors ${
+              activeIndex === 2 ? 'text-stone-900' : 'text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            Gallery
+          </button>
+        )}
       </div>
       {/* First-time-ever nudge so people discover there's a second mode at
           all. Shown once per account (see App.jsx), dismissed by clicking
@@ -162,6 +191,12 @@ export default function ReviewOverlay({
   // controls to fight over); interacting with the asset itself is the
   // deliberate, explicit toggle instead of the other way around.
   const [assetInteractive, setAssetInteractive] = useState(false);
+  // A third mode alongside Cursor/Comment, html assets only — replaces the
+  // preview entirely with a grid of screenshots crawled from the same
+  // site (see PageGallery.jsx), since there's no single "the preview" to
+  // toggle cursor/comment interaction on anymore once it's showing many
+  // pages at once.
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const previewRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -200,7 +235,7 @@ export default function ReviewOverlay({
   }, []);
 
   const handlePreviewClick = (e) => {
-    if (readOnly || assetInteractive) return;
+    if (readOnly || assetInteractive || galleryOpen) return;
     const rect = previewRef.current.getBoundingClientRect();
     const x = Math.min(96, Math.max(4, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.min(96, Math.max(4, ((e.clientY - rect.top) / rect.height) * 100));
@@ -218,7 +253,14 @@ export default function ReviewOverlay({
   // itself (which lives inside this same div) — without it, hitting the
   // spacebar while typing kept re-centering the pin and wiping the draft.
   const handlePreviewKeyDown = (e) => {
-    if (readOnly || assetInteractive || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+    if (
+      readOnly ||
+      assetInteractive ||
+      galleryOpen ||
+      e.target !== e.currentTarget ||
+      (e.key !== 'Enter' && e.key !== ' ')
+    )
+      return;
     e.preventDefault();
     setPin({ x: 50, y: 50 });
     setDraft('');
@@ -308,7 +350,19 @@ export default function ReviewOverlay({
             className={`absolute inset-0 h-full w-full object-contain ${assetInteractive ? '' : 'pointer-events-none'}`}
           />
         )}
-        {assetKind === 'html' && (
+        {assetKind === 'html' && galleryOpen && (
+          <div className="absolute inset-0" onClick={(e) => e.stopPropagation()}>
+            <PageGallery
+              startUrl={version.assetUrl}
+              comments={version.comments}
+              readOnly={readOnly}
+              onAddComment={onAddComment}
+              onResolveComment={onResolveComment}
+              onAddReply={onAddReply}
+            />
+          </div>
+        )}
+        {assetKind === 'html' && !galleryOpen && (
           <>
             {/* pointer-events-none by default so clicks fall through to
                 the outer div's click-to-pin handler above (comment-
@@ -390,19 +444,25 @@ export default function ReviewOverlay({
           </div>
         )}
 
-        {version.comments.map((c, i) => (
-          <Butterfly
-            key={c.id}
-            comment={c}
-            style={positionFor(c, i)}
-            onResolve={readOnly ? undefined : (resolved) => onResolveComment?.(c.id, resolved)}
-            onAddReply={readOnly ? undefined : (path, text) => onAddReply?.(c.id, text, path)}
-            readOnly={readOnly}
-          />
-        ))}
+        {/* pageUrl-tagged comments belong to a specific crawled Gallery
+            page (see PageGallery.jsx), not this main preview frame — those
+            render inside the gallery itself, scoped to their own page. */}
+        {!galleryOpen &&
+          version.comments
+            .filter((c) => !c.pageUrl)
+            .map((c, i) => (
+              <Butterfly
+                key={c.id}
+                comment={c}
+                style={positionFor(c, i)}
+                onResolve={readOnly ? undefined : (resolved) => onResolveComment?.(c.id, resolved)}
+                onAddReply={readOnly ? undefined : (path, text) => onAddReply?.(c.id, text, path)}
+                readOnly={readOnly}
+              />
+            ))}
 
         <AnimatePresence>
-          {pin && (
+          {!galleryOpen && pin && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -486,7 +546,7 @@ export default function ReviewOverlay({
           )}
         </AnimatePresence>
 
-        {!pin && !readOnly && (
+        {!galleryOpen && !pin && !readOnly && (
           <div className="pointer-events-none absolute bottom-24 right-6 text-[12.5px] text-stone-300">
             Click the preview to pin a comment
           </div>
@@ -511,15 +571,18 @@ export default function ReviewOverlay({
             <ArrowLeft size={16} strokeWidth={2.25} />
           </button>
           <div className="flex items-center gap-1.5">
-            {!readOnly && !embedEmpty && (
+            {!readOnly && (
               <ModeSwitch
                 interactive={assetInteractive}
                 onChange={(v) => {
                   setAssetInteractive(v);
+                  setGalleryOpen(false);
                   onDismissModeHint?.();
                 }}
                 showHint={showModeHint}
                 onDismissHint={() => onDismissModeHint?.()}
+                galleryActive={galleryOpen}
+                onSelectGallery={() => setGalleryOpen(true)}
               />
             )}
             <button

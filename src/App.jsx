@@ -764,7 +764,7 @@ export default function App() {
   // resets on reload, but adding a comment or a version genuinely updates
   // the data (new butterfly/bloom render immediately) rather than mocking it.
   const handleAddComment = useCallback(
-    (projectId, versionId, { text, tag, x, y }) => {
+    (projectId, versionId, { text, tag, x, y, pageUrl, pageTitle }) => {
       updateProjects((prev) =>
         prev.map((p) => {
           if (p.id !== projectId) return p;
@@ -777,6 +777,14 @@ export default function App() {
               if (x != null) {
                 comment.x = x;
                 comment.y = y;
+              }
+              // Set only for a pin dropped inside Gallery mode (see
+              // PageGallery.jsx) — which of the crawled pages this comment
+              // belongs to, since one version can now have many pages'
+              // worth of pins instead of just one preview frame's.
+              if (pageUrl) {
+                comment.pageUrl = pageUrl;
+                comment.pageTitle = pageTitle;
               }
               return { ...v, comments: [...v.comments, comment] };
             }),
