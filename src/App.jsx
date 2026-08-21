@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
-import { ChevronsRight } from 'lucide-react';
+import { ChevronsRight, Loader2 } from 'lucide-react';
 import GroveScene from './scenes/GroveScene';
 import CameraRig, { OVERVIEW_POS } from './scenes/CameraRig';
 import useReducedMotion from './hooks/useReducedMotion';
@@ -459,15 +459,29 @@ export default function App() {
   useEffect(() => {
     if (!viewingTerritory || territoryLoadedFor === viewingTerritory) return;
     let cancelled = false;
-    fetchProjects(viewingTerritory).then(({ projects: loaded }) => {
-      if (cancelled) return;
-      // Ids minted while visiting a territory (a new comment, a new
-      // version) must not collide with ids already in ITS data, which the
-      // load effect for your own account has no way to know about.
-      nextId = Math.max(nextId, highestGenId(loaded) + 1);
-      setTerritoryProjects(loaded);
-      setTerritoryLoadedFor(viewingTerritory);
-    });
+    fetchProjects(viewingTerritory)
+      .then(({ projects: loaded }) => {
+        if (cancelled) return;
+        // Ids minted while visiting a territory (a new comment, a new
+        // version) must not collide with ids already in ITS data, which the
+        // load effect for your own account has no way to know about.
+        nextId = Math.max(nextId, highestGenId(loaded) + 1);
+        setTerritoryProjects(loaded);
+        setTerritoryLoadedFor(viewingTerritory);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Bounce back to My Grove rather than leaving the visitor stuck on
+        // a territory that will now show as permanently "loading" (never
+        // reaches territoryLoadedFor === viewingTerritory) with no retry.
+        setTerritoryNotices((prev) => [
+          { id: genId('notice'), text: 'Could not load that territory — try again.', createdAt: new Date().toISOString() },
+          ...prev,
+        ]);
+        setViewingTerritory(null);
+        setTerritoryProjects([]);
+        setTerritoryLoadedFor(null);
+      });
     return () => {
       cancelled = true;
     };
@@ -488,6 +502,11 @@ export default function App() {
   // "Load example projects" wiring below) — everything else (comments,
   // versions, status, archive, delete) is fully editable either way.
   const isVisitingOther = Boolean(viewingTerritory);
+  // True for the window between picking a teammate and their projects
+  // actually arriving — during that gap `territoryProjects` is stale
+  // leftover data (see handleChangeTerritory), not "this territory has
+  // zero projects", so the Grove must not treat it as genuinely empty.
+  const territoryLoading = isVisitingOther && territoryLoadedFor !== viewingTerritory;
   const displayedProjects = isVisitingOther ? territoryProjects : projects;
   const visitingOwnerName = isVisitingOther
     ? territories.find((t) => t.ownerEmail === viewingTerritory)?.ownerName ?? viewingTerritory
@@ -1153,7 +1172,7 @@ export default function App() {
             onSelect={handleSelect}
             onOpenReview={handleOpenReview}
             onLoadExamples={isVisitingOther ? undefined : handleLoadExamples}
-            showEmptyCard={!showWelcome}
+            showEmptyCard={!showWelcome && !territoryLoading}
             justPlantedId={justPlantedId}
             allowOrbit={mode === 'grove' && !destination}
             reducedMotion={reducedMotion}
@@ -1177,6 +1196,12 @@ export default function App() {
           {!destination && <GroveAccessibleNav projects={displayedProjects} onSelect={handleSelect} />}
           {!destination && (
             <Minimap projects={displayedProjects} hoveredId={hoveredId} onSelect={handleSelect} />
+          )}
+          {!destination && territoryLoading && (
+            <div className="glass-surface pointer-events-none fixed left-1/2 top-20 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-medium text-stone-600">
+              <Loader2 size={14} strokeWidth={2.25} className="animate-spin" />
+              Loading {visitingOwnerName}'s grove…
+            </div>
           )}
 
           <AnimatePresence mode="wait">
