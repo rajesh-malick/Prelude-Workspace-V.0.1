@@ -17,6 +17,7 @@ import ReplyThread from '../components/ReplyThread';
 import DetailsCommentsSwitch from '../components/DetailsCommentsSwitch';
 import SlashTagMenu from '../components/SlashTagMenu';
 import useSlashTagPicker from '../hooks/useSlashTagPicker';
+import useEmbedEmptyCheck from '../hooks/useEmbedEmptyCheck';
 import { TAG_OPTIONS, TAG_ICON } from '../utils/commentTags';
 import { getEmbedSrc } from '../utils/embedProxy';
 
@@ -102,6 +103,8 @@ export default function FocusReviewView({
     ? 'file'
     : null;
 
+  const { iframeRef: embedIframeRef, embedEmpty, handleEmbedLoad } = useEmbedEmptyCheck(version.assetUrl);
+
   // See Grove's ReviewOverlay for the reasoning — a live website brings
   // its own logo/nav into the exact corners our controls used to float
   // over, so instead of overlaying it, a reserved strip renders above it
@@ -128,9 +131,23 @@ export default function FocusReviewView({
         )}
         {assetKind === 'html' && (
           <>
-            <iframe src={getEmbedSrc(version.assetUrl)} title={version.label} className="absolute inset-0 h-full w-full border-0 bg-white" />
+            <iframe
+              ref={embedIframeRef}
+              onLoad={handleEmbedLoad}
+              src={getEmbedSrc(version.assetUrl)}
+              title={version.label}
+              className="absolute inset-0 h-full w-full border-0 bg-white"
+            />
             {/* Routed through /api/embed-proxy (see getEmbedSrc) — see
-                Grove's ReviewOverlay for why and its real limits. */}
+                Grove's ReviewOverlay for why, its real limits, and what
+                embedEmpty (useEmbedEmptyCheck) is catching. */}
+            {embedEmpty && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/90 text-center">
+                <p className="max-w-[280px] text-[13.5px] leading-snug text-stone-600">
+                  This page needs its own login or JavaScript to display content — it can't be shown here.
+                </p>
+              </div>
+            )}
             <a
               href={version.assetUrl}
               target="_blank"

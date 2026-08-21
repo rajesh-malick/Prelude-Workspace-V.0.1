@@ -16,6 +16,7 @@ import ReplyThread from './ReplyThread';
 import DetailsCommentsSwitch from './DetailsCommentsSwitch';
 import SlashTagMenu from './SlashTagMenu';
 import useSlashTagPicker from '../hooks/useSlashTagPicker';
+import useEmbedEmptyCheck from '../hooks/useEmbedEmptyCheck';
 import { resolvedNote } from '../utils/commentStatus';
 import { TAG_OPTIONS, TAG_ICON, TAG_LABEL } from '../utils/commentTags';
 import { getEmbedSrc } from '../utils/embedProxy';
@@ -244,6 +245,8 @@ export default function ReviewOverlay({
     ? 'file'
     : null;
 
+  const { iframeRef: embedIframeRef, embedEmpty, handleEmbedLoad } = useEmbedEmptyCheck(version.assetUrl);
+
   // Live websites bring their own logo/nav into the exact corners our
   // controls used to float over — there's no corner that's safe for an
   // arbitrary site. So instead of overlaying it, we reserve a strip above
@@ -306,6 +309,8 @@ export default function ReviewOverlay({
                 now), which is what makes it scrollable/interactive, since
                 a disabled iframe can't be scrolled at all either. */}
             <iframe
+              ref={embedIframeRef}
+              onLoad={handleEmbedLoad}
               src={getEmbedSrc(version.assetUrl)}
               title={version.label}
               className={`absolute inset-0 h-full w-full border-0 bg-white ${assetInteractive ? '' : 'pointer-events-none'}`}
@@ -316,7 +321,18 @@ export default function ReviewOverlay({
                 here. Still not universal — heavy JS apps, bot-protected
                 sites, and anything requiring login can still render blank
                 or broken — a working link straight to the real site stays
-                the fallback either way. */}
+                the fallback either way. embedEmpty (see useEmbedEmptyCheck)
+                catches that case a couple seconds after load, once any
+                client-side JS has had a real chance to hydrate the page —
+                checking any earlier would false-flag ordinary JS-rendered
+                sites that just need a moment. */}
+            {embedEmpty && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/90 text-center">
+                <p className="max-w-[280px] text-[13.5px] leading-snug text-stone-600">
+                  This page needs its own login or JavaScript to display content — it can't be shown here.
+                </p>
+              </div>
+            )}
             <a
               href={version.assetUrl}
               target="_blank"

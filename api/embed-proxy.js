@@ -105,23 +105,23 @@ async function fetchFollowingRedirects(startUrl) {
   throw new Error('Too many redirects.');
 }
 
-// Heavy client-side apps (Airbnb, Sketchfab, most modern SaaS product
-// pages) ship an almost-empty HTML shell and fetch their real content from
-// their own private APIs after load — calls that get blocked once this
-// document is served from our origin instead of theirs (ordinary CORS,
-// nothing this proxy can do about it). Login-walled pages (LinkedIn posts,
-// most social platforms) render plenty of real HTML but it's the wall
-// itself, not the content. Neither is a "can't reach the site" error, so
-// there's nothing to retry — this is a genuine dead end worth saying so
-// plainly about rather than serving a blank-looking iframe.
+// Login-walled pages (LinkedIn posts, most social platforms) server-render
+// plenty of real HTML — it's just the wall itself, not the content. That's
+// a genuine dead end (we never have the visitor's session for the target
+// site), worth catching here since the wall text IS the final rendered
+// state — no amount of waiting changes it.
 //
-// Both heuristics below are inherently fuzzy best-effort guesses, not a
-// real detector — a short but perfectly real page (a one-line "coming
-// soon") could trip the length check, and the phrase check only catches
-// wording actually seen in testing. Good enough to catch the common cases
-// without false-flagging most real content.
-const MIN_TEXT_CHARS = 800;
-const LOGIN_WALL_PATTERN = /\b(sign in|log in|create (a |an )?account|join (linkedin|now|to (view|continue))|subscribe to (continue|read)|enable javascript)\b/i;
+// Deliberately NOT checking "is there much text at all" here — an almost-
+// empty shell is completely normal for any modern JS-hydrated site (Figma
+// Sites, Webflow, Framer, etc.) and says nothing about whether it'll
+// render fine once its own JS actually runs, which hasn't happened yet at
+// this point (this only ever sees the raw pre-JS HTML). That distinction —
+// "empty because it needs JS" vs. "empty because the JS-driven render
+// itself failed" — can only be told apart by checking AFTER the JS has had
+// a chance to run, which happens client-side (see the iframe onLoad
+// handling in ReviewOverlay.jsx/FocusReviewView.jsx) since the proxy makes
+// the iframe same-origin with the app.
+const LOGIN_WALL_PATTERN = /\b(sign in|log in|create (a |an )?account|join (linkedin|now|to (view|continue))|subscribe to (continue|read))\b/i;
 
 function extractVisibleText(html) {
   return html
@@ -132,8 +132,7 @@ function extractVisibleText(html) {
     .trim();
 }
 
-function looksUnrenderable(visibleText) {
-  if (visibleText.length < MIN_TEXT_CHARS) return true;
+function looksLoginWalled(visibleText) {
   return LOGIN_WALL_PATTERN.test(visibleText.slice(0, 400));
 }
 
@@ -201,7 +200,7 @@ export default async function handler(req, res) {
 
     let html = await readCapped(response);
 
-    if (looksUnrenderable(extractVisibleText(html))) {
+    if (looksLoginWalled(extractVisibleText(html))) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).send(unrenderableFallbackHtml(target));
