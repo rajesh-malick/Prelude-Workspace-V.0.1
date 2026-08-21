@@ -126,30 +126,29 @@ export function startThunderstorm(ctx) {
   };
 }
 
-export function startCrickets(ctx) {
-  let timer;
-  const chirpBurst = () => {
-    const chirpCount = 3 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < chirpCount; i++) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 4200 + Math.random() * 300;
-      gain.gain.value = 0;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      const t = ctx.currentTime + i * 0.09;
-      gain.gain.linearRampToValueAtTime(0.015, t + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-      osc.start(t);
-      osc.stop(t + 0.06);
-    }
-    timer = setTimeout(chirpBurst, 900 + Math.random() * 1400);
-  };
-  chirpBurst();
+// A real recording (Mixkit's sound-effects library — free for commercial
+// and personal use, no attribution required) rather than synthesis, for
+// this one specifically — real crickets sound like real crickets in a way
+// oscillators approximate but never quite nail, unlike the noise-based
+// wind/rain above, which read convincingly either way. Plays as a plain
+// looping <audio> element rather than through the shared AudioContext —
+// there's no filtering/mixing need here, just "loop this file" — so `ctx`
+// is accepted (to keep the same starter(ctx) shape as every other weather
+// sound here) but unused.
+const CRICKETS_SRC = '/audio/mixkit-summer-crickets-loop-1788.wav';
+
+export function startCrickets() {
+  const audio = new Audio(CRICKETS_SRC);
+  audio.loop = true;
+  audio.volume = 0.35;
+  audio.play().catch(() => {
+    // Autoplay blocked — shouldn't happen here since this only ever runs
+    // from useWeatherSound's pointerdown-unlock path, but fail quietly
+    // either way rather than throwing.
+  });
   return {
     stop() {
-      clearTimeout(timer);
+      audio.pause();
     },
   };
 }
