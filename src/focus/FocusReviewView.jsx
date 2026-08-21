@@ -103,7 +103,15 @@ export default function FocusReviewView({
     ? 'file'
     : null;
 
-  const { iframeRef: embedIframeRef, embedEmpty, handleEmbedLoad } = useEmbedEmptyCheck(version.assetUrl);
+  const {
+    iframeRef: embedIframeRef,
+    embedEmpty,
+    handleEmbedLoad,
+    screenshotLoaded,
+    onScreenshotLoad,
+    screenshotFailed,
+    onScreenshotError,
+  } = useEmbedEmptyCheck(version.assetUrl);
 
   // See Grove's ReviewOverlay for the reasoning — a live website brings
   // its own logo/nav into the exact corners our controls used to float
@@ -141,7 +149,21 @@ export default function FocusReviewView({
             {/* Routed through /api/embed-proxy (see getEmbedSrc) — see
                 Grove's ReviewOverlay for why, its real limits, and what
                 embedEmpty (useEmbedEmptyCheck) is catching. */}
-            {embedEmpty && (
+            {embedEmpty && !screenshotFailed && (
+              <img
+                src={`/api/screenshot-proxy?url=${encodeURIComponent(version.assetUrl)}`}
+                alt={version.label}
+                onLoad={onScreenshotLoad}
+                onError={onScreenshotError}
+                className="pointer-events-none absolute inset-0 h-full w-full bg-white object-contain"
+              />
+            )}
+            {embedEmpty && !screenshotLoaded && !screenshotFailed && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/80 text-center">
+                <p className="text-[13px] text-stone-500">Capturing a preview…</p>
+              </div>
+            )}
+            {embedEmpty && screenshotFailed && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/90 text-center">
                 <p className="max-w-[280px] text-[13.5px] leading-snug text-stone-600">
                   This page needs its own login or JavaScript to display content — it can't be shown here.

@@ -1,5 +1,5 @@
-import dns from 'node:dns/promises';
 import { getSessionUser } from './_lib/session.js';
+import { assertPublicHost } from './_lib/urlSafety.js';
 
 // Most real websites send X-Frame-Options / CSP `frame-ancestors` headers
 // specifically to stop third-party sites (like this one) from putting them
@@ -29,48 +29,8 @@ const MAX_BYTES = 5_000_000;
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
 
-function ipv4ToInt(ip) {
-  return ip.split('.').reduce((acc, part) => (acc << 8) + Number(part), 0) >>> 0;
-}
-
-function isPrivateIPv4(ip) {
-  const n = ipv4ToInt(ip);
-  const inRange = (base, bits) => {
-    const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
-    return (n & mask) === (ipv4ToInt(base) & mask);
-  };
-  // Loopback, link-local (incl. the cloud metadata endpoint at
-  // 169.254.169.254), and the three private ranges — anywhere a server-
-  // side fetch driven by user input shouldn't be able to reach.
-  return (
-    inRange('127.0.0.0', 8) ||
-    inRange('169.254.0.0', 16) ||
-    inRange('10.0.0.0', 8) ||
-    inRange('172.16.0.0', 12) ||
-    inRange('192.168.0.0', 16) ||
-    inRange('0.0.0.0', 8)
-  );
-}
-
-function isPrivateIPv6(ip) {
-  const lower = ip.toLowerCase();
-  return lower === '::1' || lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80');
-}
-
-// A signed-in-only endpoint (see getSessionUser below) still hands an
-// attacker-controlled URL to a server-side fetch — without this, anyone
-// signed in could use it to probe internal network addresses or the cloud
-// metadata service (SSRF). Resolves the hostname and rejects anything that
-// lands on a private/loopback/link-local address, on every redirect hop,
-// not just the initial URL.
-async function assertPublicHost(hostname) {
-  if (hostname.toLowerCase() === 'localhost') throw new Error('Host not allowed.');
-  const { address, family } = await dns.lookup(hostname);
-  if (family === 4 ? isPrivateIPv4(address) : isPrivateIPv6(address)) {
-    throw new Error('Host not allowed.');
-  }
-}
-
+// SSRF guard (assertPublicHost, shared with api/screenshot-proxy.js) is
+// applied on every redirect hop below, not just the initial URL.
 async function fetchFollowingRedirects(startUrl) {
   let current = startUrl;
   for (let i = 0; i <= MAX_REDIRECTS; i++) {

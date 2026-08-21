@@ -17,11 +17,20 @@ const MIN_CHARS = 40;
 
 export default function useEmbedEmptyCheck(assetUrl) {
   const [embedEmpty, setEmbedEmpty] = useState(false);
+  // Once the live iframe is confirmed empty, a screenshot (api/screenshot-
+  // proxy.js) is tried as a fallback — these two just track that image's
+  // own load state, since a plain <img> gives no other way to tell
+  // "still loading" from "loaded" from "the screenshot itself failed too"
+  // (bot-protected, timed out, or genuinely requires login).
+  const [screenshotLoaded, setScreenshotLoaded] = useState(false);
+  const [screenshotFailed, setScreenshotFailed] = useState(false);
   const iframeRef = useRef(null);
   const timeoutRef = useRef(null);
 
   useEffect(() => {
     setEmbedEmpty(false);
+    setScreenshotLoaded(false);
+    setScreenshotFailed(false);
     return () => clearTimeout(timeoutRef.current);
   }, [assetUrl]);
 
@@ -41,5 +50,13 @@ export default function useEmbedEmptyCheck(assetUrl) {
     }, SETTLE_MS);
   };
 
-  return { iframeRef, embedEmpty, handleEmbedLoad };
+  return {
+    iframeRef,
+    embedEmpty,
+    handleEmbedLoad,
+    screenshotLoaded,
+    onScreenshotLoad: () => setScreenshotLoaded(true),
+    screenshotFailed,
+    onScreenshotError: () => setScreenshotFailed(true),
+  };
 }

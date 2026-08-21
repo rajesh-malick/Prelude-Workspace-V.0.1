@@ -245,7 +245,15 @@ export default function ReviewOverlay({
     ? 'file'
     : null;
 
-  const { iframeRef: embedIframeRef, embedEmpty, handleEmbedLoad } = useEmbedEmptyCheck(version.assetUrl);
+  const {
+    iframeRef: embedIframeRef,
+    embedEmpty,
+    handleEmbedLoad,
+    screenshotLoaded,
+    onScreenshotLoad,
+    screenshotFailed,
+    onScreenshotError,
+  } = useEmbedEmptyCheck(version.assetUrl);
 
   // Live websites bring their own logo/nav into the exact corners our
   // controls used to float over — there's no corner that's safe for an
@@ -326,7 +334,30 @@ export default function ReviewOverlay({
                 client-side JS has had a real chance to hydrate the page —
                 checking any earlier would false-flag ordinary JS-rendered
                 sites that just need a moment. */}
-            {embedEmpty && (
+            {embedEmpty && !screenshotFailed && (
+              // A static screenshot (api/screenshot-proxy.js) of the same
+              // link, taken by a real headless browser navigating to it
+              // directly on ITS OWN domain — sidesteps the CORS problem
+              // entirely (it's genuinely same-origin from the target
+              // site's own perspective), at the cost of no longer being
+              // live/interactive. Comments still pin to it the same way
+              // they do to a plain uploaded image, via the click handler
+              // on the outer preview div — pointer-events-none here is
+              // what lets those clicks fall through to it.
+              <img
+                src={`/api/screenshot-proxy?url=${encodeURIComponent(version.assetUrl)}`}
+                alt={version.label}
+                onLoad={onScreenshotLoad}
+                onError={onScreenshotError}
+                className="pointer-events-none absolute inset-0 h-full w-full bg-white object-contain"
+              />
+            )}
+            {embedEmpty && !screenshotLoaded && !screenshotFailed && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/80 text-center">
+                <p className="text-[13px] text-stone-500">Capturing a preview…</p>
+              </div>
+            )}
+            {embedEmpty && screenshotFailed && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/90 text-center">
                 <p className="max-w-[280px] text-[13.5px] leading-snug text-stone-600">
                   This page needs its own login or JavaScript to display content — it can't be shown here.
@@ -480,7 +511,7 @@ export default function ReviewOverlay({
             <ArrowLeft size={16} strokeWidth={2.25} />
           </button>
           <div className="flex items-center gap-1.5">
-            {!readOnly && (
+            {!readOnly && !embedEmpty && (
               <ModeSwitch
                 interactive={assetInteractive}
                 onChange={(v) => {
