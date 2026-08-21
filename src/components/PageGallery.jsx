@@ -18,7 +18,14 @@ function positionFor(comment, i) {
 }
 
 async function fetchCrawlPreview(url) {
-  const res = await fetch(`/api/crawl-preview?url=${encodeURIComponent(url)}`, { credentials: 'include' });
+  // Same function as the single-link screenshot fallback
+  // (api/screenshot-proxy.js) — ?mode=crawl switches it into Gallery's
+  // multi-page crawl instead of a single-image capture, so the (large)
+  // headless-browser dependency only gets bundled into one deployed
+  // function rather than two.
+  const res = await fetch(`/api/screenshot-proxy?mode=crawl&url=${encodeURIComponent(url)}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Could not crawl this site.');
   return res.json();
 }
