@@ -6,6 +6,7 @@ import GroveScene from './scenes/GroveScene';
 import CameraRig, { OVERVIEW_POS } from './scenes/CameraRig';
 import useReducedMotion from './hooks/useReducedMotion';
 import useAmbientChirps from './hooks/useAmbientChirps';
+import useWeatherSound from './hooks/useWeatherSound';
 import useTimeOfDay from './hooks/useTimeOfDay';
 import { getPhase } from './utils/timeOfDay';
 import { GERMINATION_SCENE_URL, GERMINATION_SCENE_DURATION } from './components/GerminationSpline';
@@ -345,6 +346,10 @@ export default function App() {
   // birds themselves, see GroveScene/AmbientLife below) pause overnight
   // instead of playing on a loop regardless of the Grove's own lighting.
   useAmbientChirps(soundOn && mode === 'grove' && !isNight);
+  // Weather's own ambience (crickets/wind/rain/thunder/bells — see
+  // weatherSound.js) — not gated on day/night like the birds above, since
+  // rain doesn't stop being rain after dark.
+  useWeatherSound(weatherCategory, soundOn && mode === 'grove');
 
   useEffect(() => {
     if (!session?.email || profileLoadedFor === session.email) return;
