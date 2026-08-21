@@ -97,36 +97,11 @@ export function startBlizzardWind() {
 // A short, repeating jingle-bell-ish motif for snow/fog/blizzard — a few
 // slightly-detuned sine partials per note with a fast decay reads as a
 // small bell rather than a flat "boop" from a single plain sine.
-const BELL_NOTES = [880, 987.77, 880, 659.25, 587.33, 659.25, 880, 987.77];
-const BELL_PARTIALS = [1, 2.4, 3.8];
-
-export function startJingleBells(ctx) {
-  let noteIndex = 0;
-  let timer;
-  const playNote = () => {
-    const freq = BELL_NOTES[noteIndex % BELL_NOTES.length];
-    noteIndex++;
-    BELL_PARTIALS.forEach((mult, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq * mult;
-      gain.gain.value = 0;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      const t = ctx.currentTime;
-      const peak = i === 0 ? 0.05 : 0.018;
-      gain.gain.linearRampToValueAtTime(peak, t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-      osc.start(t);
-      osc.stop(t + 0.55);
-    });
-    timer = setTimeout(playNote, 420);
-  };
-  playNote();
-  return {
-    stop() {
-      clearTimeout(timer);
-    },
-  };
+// A real (royalty-free, per its own source filename) instrumental
+// recording rather than the synthesized motif this replaced — "Jingle
+// Bells" the composition itself has been public domain since the 1800s
+// regardless, but this specific recording is what's actually playing.
+const JINGLE_BELLS_SRC = '/audio/jingle-bells-royalty-free.mp3';
+export function startJingleBells() {
+  return startAudioLoop(JINGLE_BELLS_SRC, 0.28);
 }
