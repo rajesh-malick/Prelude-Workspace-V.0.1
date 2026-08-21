@@ -1,9 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { startWind, startRain, startThunderstorm, startCrickets, startJingleBells } from '../utils/weatherSound';
+import {
+  startWind,
+  startRain,
+  startThunderstorm,
+  startCrickets,
+  startBlizzardWind,
+  startJingleBells,
+} from '../utils/weatherSound';
 
 // Cloudy/fog/clear (i.e. no override, before a real weatherMode is loaded)
 // get no extra sound — everything else below is a category with a
-// distinct-enough real-world sound that's worth synthesizing for.
+// distinct-enough real-world sound that's worth playing/synthesizing for.
 const STARTERS = {
   sunny: startCrickets,
   windy: startWind,
@@ -11,7 +18,7 @@ const STARTERS = {
   thunderstorm: startThunderstorm,
   snow: startJingleBells,
   fog: startJingleBells,
-  blizzard: startJingleBells,
+  blizzard: startBlizzardWind,
 };
 
 // Same "wait for a real user gesture, browsers block audio before one"
