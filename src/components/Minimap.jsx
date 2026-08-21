@@ -29,7 +29,11 @@ function useMinimapPoints(projects) {
 // `allowOrbit` in App.jsx) — since a scripted camera flight into a tree or
 // bloom has nowhere left to navigate to.
 export default function Minimap({ projects, hoveredId, onSelect }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // Starts collapsed — a small icon button, not an open panel — so it
+  // doesn't just show up uninvited every time the Grove overview is on
+  // screen. Expands to the actual map only once someone deliberately
+  // clicks it.
+  const [collapsed, setCollapsed] = useState(true);
   const points = useMinimapPoints(projects);
 
   if (projects.length === 0) return null;

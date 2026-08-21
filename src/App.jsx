@@ -345,7 +345,11 @@ export default function App() {
   // Real birds go quiet and out of sight after dark — chirping (and the
   // birds themselves, see GroveScene/AmbientLife below) pause overnight
   // instead of playing on a loop regardless of the Grove's own lighting.
-  useAmbientChirps(soundOn && mode === 'grove' && !isNight);
+  // Same idea for weather — birds don't sit around chirping through rain,
+  // wind, snow, or a thunderstorm, so those categories mute them too
+  // rather than layering birdsong under the weather's own ambience.
+  const roughWeather = ['rain', 'windy', 'snow', 'thunderstorm', 'blizzard'].includes(weatherCategory);
+  useAmbientChirps(soundOn && mode === 'grove' && !isNight && !roughWeather);
   // Weather's own ambience (crickets/wind/rain/thunder/bells — see
   // weatherSound.js) — not gated on day/night like the birds above, since
   // rain doesn't stop being rain after dark.
